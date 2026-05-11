@@ -3,12 +3,11 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-#include "truthtable.h"
 
 
 typedef struct uint8_s {
@@ -22,35 +21,39 @@ typedef struct uint8_s {
   uint8_t h : 1;
 } uint8_s;
 
-uint8_t uint8_binary_weight(uint8_t);
-void uint8_format_bits(uint8_t, char* restrict);
-void print_byte_bits(uint8_t, char* restrict);
-void print_byte_bits_uint16(uint16_t, char* restrict);
-void format_bits(void* restrict, size_t, char* restrict);
-void print_bits(void* restrict, size_t, char* restrict);
+uint8_t uint8_binary_weight(const uint8_t);
+void uint8_format_bits(const uint8_t, char* restrict);
+void print_byte_bits(const uint8_t, const char* restrict);
+void print_byte_bits_uint16(const uint16_t, const char* restrict);
+void format_bits(const void* restrict, size_t, char* restrict);
+void print_bits(const void* restrict, size_t, const char* restrict);
 
 typedef struct bigint_t {
   uint8_t* ptr;
   INPUT_SIZE_TYPE count;
 } bigint_t;
 
-bigint_t bigint_new(INPUT_SIZE_TYPE);
+bigint_t bigint_new(const INPUT_SIZE_TYPE);
 bigint_t bigint_from_allocation(void* restrict, INPUT_SIZE_TYPE);
 void bigint_destroy(bigint_t);
-void bigint_set(bigint_t* restrict, uint8_t* restrict, INPUT_SIZE_TYPE);
-bigint_t bigint_clone(bigint_t);
-void bigint_copy_into(bigint_t, bigint_t* restrict);
+void bigint_set(bigint_t* restrict, const uint8_t* restrict, const INPUT_SIZE_TYPE);
+bigint_t bigint_clone(const bigint_t);
+void bigint_copy_into(const bigint_t, bigint_t);
 
-INPUT_SIZE_TYPE bigint_binary_weight(bigint_t);
+INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t);
 uint8_t bigint_inc(bigint_t);
+uint8_t bigint_inc_into(const bigint_t, bigint_t);
+ptrdiff_t bigint_into_ptrdiff(const bigint_t);
+bool bigint_get_bit(const bigint_t, INPUT_SIZE_TYPE);
 
-void bigint_print_binary(bigint_t, char*);
+void bigint_print_binary(const bigint_t, const char*);
 
-bool bigint_equals(bigint_t, bigint_t);
-void bigint_bitand(bigint_t, bigint_t, bigint_t);
-void bigint_bitor(bigint_t, bigint_t, bigint_t);
-void bigint_bitxor(bigint_t, bigint_t, bigint_t);
-void bigint_bitnot(bigint_t, bigint_t);
+bool bigint_equals(const bigint_t, const bigint_t);
+bool bigint_equals_zero(const bigint_t);
+void bigint_bitand(const bigint_t, const bigint_t, bigint_t);
+void bigint_bitor(const bigint_t, const bigint_t, bigint_t);
+void bigint_bitxor(const bigint_t, const bigint_t, bigint_t);
+void bigint_bitnot(const bigint_t, const bigint_t);
 
 typedef struct byte_diff_result_t {
   uint16_t diff;
@@ -62,30 +65,29 @@ typedef struct bigint_diff_t {
   INPUT_SIZE_TYPE count;
 } bigint_diff_t;
 
-typedef struct bigint_diff_result_t {
-  bigint_diff_t diff;
-  INPUT_SIZE_TYPE count;
-} bigint_diff_result_t;
-
+bigint_diff_t bigint_diff_from_allocation(void* restrict, INPUT_SIZE_TYPE);
 void bigint_diff_destroy(bigint_diff_t);
 
-byte_diff_result_t diff_byte(uint8_t, uint8_t);
-byte_diff_result_t diff_diff(uint16_t, uint16_t);
+byte_diff_result_t diff_byte(const uint8_t, const uint8_t);
+byte_diff_result_t diff_diff(const uint16_t, const uint16_t);
 
-bigint_diff_result_t bigint_diff(bigint_t, bigint_t);
-bigint_diff_result_t bigint_diff_diff(bigint_diff_t, bigint_diff_t);
+INPUT_SIZE_TYPE bigint_diff_into(const bigint_t, const bigint_t, bigint_diff_t);
+INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t, const bigint_diff_t, bigint_diff_t);
 
-void diff_format(uint16_t, char* restrict);
-void diff_print(uint16_t, char* restrict);
-void bigint_diff_print_binary(bigint_diff_t, char* restrict);
-void bigint_diff_format(bigint_diff_t, char* restrict);
-void bigint_diff_print(bigint_diff_t, char* restrict);
+uint16_t byte_into_diff(const uint8_t);
+void bigint_into_diff(const bigint_t, bigint_diff_t);
+
+void diff_format(const uint16_t, char* restrict);
+void diff_print(const uint16_t, const char* restrict);
+void bigint_diff_print_binary(const bigint_diff_t, const char* restrict);
+void bigint_diff_format(const bigint_diff_t, char* restrict);
+void bigint_diff_print(const bigint_diff_t, const char* restrict);
 
 #endif // BIGINT_H
 
 #ifdef BIGINT_IMPLEMENTATION
 
-uint8_t uint8_binary_weight(uint8_t byte) {
+uint8_t uint8_binary_weight(const uint8_t byte) {
   uint8_s bits = *((uint8_s*) &byte);
 
   return bits.a
@@ -98,12 +100,12 @@ uint8_t uint8_binary_weight(uint8_t byte) {
        + bits.h;
 }
 
-void format_byte_bits(uint8_t num, char* restrict output) {
+void format_byte_bits(const uint8_t num, char* restrict output) {
   for (size_t i = 0; i < 8; ++i)
     *output++ = ((num << i) & 0b10000000) == 0 ? '0' : '1';
 }
 
-void print_byte_bits(uint8_t num, char* restrict end) {
+void print_byte_bits(const uint8_t num, const char* restrict end) {
   char* str = malloc(8);
   format_byte_bits(num, str);
   printf("%.*s%s", 8, str, end);
@@ -111,7 +113,7 @@ void print_byte_bits(uint8_t num, char* restrict end) {
   free(str);
 }
 
-void print_byte_bits_uint16(uint16_t num, char* restrict end) {
+  void print_byte_bits_uint16(const uint16_t num, const char* restrict end) {
   char* str = malloc(8);
   format_byte_bits(*(((uint8_t*) &num) + 1), str);
   printf("%.*s", 8, str);
@@ -121,7 +123,7 @@ void print_byte_bits_uint16(uint16_t num, char* restrict end) {
   free(str);
 }
 
-void format_bits(void* restrict num, size_t count, char* restrict output) {
+void format_bits(const void* restrict num, const size_t count, char* restrict output) {
   uint8_t* ptr = (uint8_t*) num + count - 1;
 
   while ((void*) ptr >= num) {
@@ -130,7 +132,7 @@ void format_bits(void* restrict num, size_t count, char* restrict output) {
   }
 }
 
-void print_bits(void* restrict num, size_t count, char* restrict end) {
+void print_bits(const void* restrict num, const size_t count, const char* restrict end) {
   char* str = malloc(count * 8);
   format_bits(num, count, str);
   printf("%.*s%s", (int) count * 8, str, end);
@@ -138,16 +140,14 @@ void print_bits(void* restrict num, size_t count, char* restrict end) {
   free(str);
 }
 
-bigint_t bigint_new(INPUT_SIZE_TYPE size) {
+bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
   return (bigint_t) {
     .ptr = calloc(size, 1),
     .count = size
   };
 }
 
-bigint_t bigint_from_allocation(void* restrict allocation, INPUT_SIZE_TYPE size) {
-  memset(allocation, 0, size);
-
+bigint_t bigint_from_allocation(void* restrict allocation, const INPUT_SIZE_TYPE size) {
   return (bigint_t) {
     .ptr = allocation,
     .count = size
@@ -158,7 +158,7 @@ void bigint_destroy(bigint_t num) {
   free(num.ptr);
 }
 
-void bigint_set(bigint_t* restrict num, uint8_t* restrict ptr, INPUT_SIZE_TYPE count) {
+void bigint_set(bigint_t* restrict num, const uint8_t* restrict ptr, const INPUT_SIZE_TYPE count) {
   assert(count <= num->count);
 
   for (size_t i = 0; i < count; ++i) {
@@ -166,21 +166,25 @@ void bigint_set(bigint_t* restrict num, uint8_t* restrict ptr, INPUT_SIZE_TYPE c
   }
 }
 
-bigint_t bigint_clone(bigint_t num) {
+void bigint_set_zero(bigint_t num) {
+  memset((void*) num.ptr, 0, num.count);
+}
+
+bigint_t bigint_clone(const bigint_t num) {
   bigint_t new = bigint_new(num.count);
-  bigint_copy_into(num, &new);
+  bigint_copy_into(num, new);
 
   return new;
 }
 
-void bigint_copy_into(bigint_t num, bigint_t* restrict other) {
-  assert(num.count <= other->count);
+void bigint_copy_into(const bigint_t num, bigint_t other) {
+  assert(num.count <= other.count);
 
-  memcpy((void*) other->ptr, (void*) num.ptr, num.count);
+  memcpy((void*) other.ptr, (void*) num.ptr, num.count);
 }
 
-INPUT_SIZE_TYPE bigint_binary_weight(bigint_t num) {
-  size_t sum = 0;
+INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t num) {
+  INPUT_SIZE_TYPE sum = 0;
 
   for (size_t i = 0; i < num.count; ++i) {
     sum += uint8_binary_weight(num.ptr[i]);
@@ -189,7 +193,7 @@ INPUT_SIZE_TYPE bigint_binary_weight(bigint_t num) {
   return sum;
 }
 
-void bigint_print_binary(bigint_t num, char* restrict end) {
+void bigint_print_binary(const bigint_t num, const char* restrict end) {
   char* str = malloc(num.count * 8);
   format_bits(num.ptr, num.count, str);
   printf("%.*s%s", (int) num.count * 8, str, end);
@@ -197,7 +201,7 @@ void bigint_print_binary(bigint_t num, char* restrict end) {
   free(str);
 }
 
-void bigint_diff_print_binary(bigint_diff_t diff, char* restrict end) {
+void bigint_diff_print_binary(const bigint_diff_t diff, const char* restrict end) {
   char* str = malloc(diff.count * 8 * sizeof(uint16_t));
   format_bits((uint8_t*) diff.ptr, diff.count * sizeof(uint16_t), str);
   printf("%.*s%s", (int) (diff.count * 8 * sizeof(uint16_t)), str, end);
@@ -205,14 +209,14 @@ void bigint_diff_print_binary(bigint_diff_t diff, char* restrict end) {
   free(str);
 }
 
-void diff_format(uint16_t diff, char* restrict output) {
+void diff_format(const uint16_t diff, char* restrict output) {
   for (size_t i = 0; i < 8; ++i) {
     uint16_t mask = (diff << 2 * i) & 0b1100000000000000;
     *output++ = (mask & 0b1000000000000000) ? '-' : ((mask == 0) ? '0' : '1');
   }
 }
 
-void diff_print(uint16_t diff, char* restrict end) {
+void diff_print(const uint16_t diff, const char* restrict end) {
   char* str = malloc(8);
   diff_format(diff, str);
   printf("%.*s%s", (int) 8, str, end);
@@ -220,7 +224,7 @@ void diff_print(uint16_t diff, char* restrict end) {
   free(str);
 }
 
-void bigint_diff_format(bigint_diff_t diff, char* restrict output) {
+void bigint_diff_format(const bigint_diff_t diff, char* restrict output) {
   uint16_t* ptr = diff.ptr + diff.count - 1;
 
   while (ptr >= diff.ptr) {
@@ -229,7 +233,7 @@ void bigint_diff_format(bigint_diff_t diff, char* restrict output) {
   }
 }
 
-void bigint_diff_print(bigint_diff_t diff, char* restrict end) {
+void bigint_diff_print(const bigint_diff_t diff, const char* restrict end) {
   char* str = malloc(diff.count * 8);
   bigint_diff_format(diff, str);
   printf("%.*s%s", (int) diff.count * 8, str, end);
@@ -246,9 +250,11 @@ uint8_t bigint_inc(bigint_t num) {
   }
 
   return carry;
+
+  // return (*((size_t*) num.ptr))++ == 0;
 }
 
-uint8_t bigint_inc_into(bigint_t num, bigint_t other) {
+uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
   uint8_t carry = 1;
   uint8_t* ptra = num.ptr;
   uint8_t* ptrb = other.ptr;
@@ -260,7 +266,26 @@ uint8_t bigint_inc_into(bigint_t num, bigint_t other) {
   return carry;
 }
 
-bool bigint_equals(bigint_t a, bigint_t b) {
+ptrdiff_t bigint_into_ptrdiff(const bigint_t num) {
+  assert(num.count <= sizeof(ptrdiff_t));
+  assert(num.count < sizeof(ptrdiff_t) || (num.ptr[num.count-1] & 0b10000000) == 0);
+  ptrdiff_t ptr = 0;
+
+  for (size_t i = 0; i < num.count; ++i) {
+    ptr += ((ptrdiff_t) num.ptr[i]) << 8 * i;
+  }
+
+  return ptr;
+}
+
+bool bigint_get_bit(const bigint_t num, INPUT_SIZE_TYPE bit) {
+  div_t r = div(bit, 8);
+  uint8_t byte = num.ptr[r.quot];
+
+  return byte & (1 << r.rem);
+}
+
+bool bigint_equals(const bigint_t a, const bigint_t b) {
   assert(a.count == b.count);
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -270,7 +295,15 @@ bool bigint_equals(bigint_t a, bigint_t b) {
   return true;
 }
 
-void bigint_bitand(bigint_t a, bigint_t b, bigint_t output) {
+bool bigint_equals_zero(const bigint_t a) {
+  for (size_t i = 0; i < a.count; ++i) {
+    if (a.ptr[i] != 0) return false;
+  }
+
+  return true;
+}
+
+void bigint_bitand(const bigint_t a, const bigint_t b, bigint_t output) {
   assert(a.count == b.count);
   assert(a.count == output.count);
 
@@ -279,7 +312,7 @@ void bigint_bitand(bigint_t a, bigint_t b, bigint_t output) {
   }
 }
 
-void bigint_bitor(bigint_t a, bigint_t b, bigint_t output) {
+void bigint_bitor(const bigint_t a, const bigint_t b, bigint_t output) {
   assert(a.count == b.count);
   assert(a.count == output.count);
 
@@ -288,7 +321,7 @@ void bigint_bitor(bigint_t a, bigint_t b, bigint_t output) {
   }
 }
 
-void bigint_bitxor(bigint_t a, bigint_t b, bigint_t output) {
+void bigint_bitxor(const bigint_t a, const bigint_t b, bigint_t output) {
   assert(a.count == b.count);
   assert(a.count == output.count);
 
@@ -297,7 +330,7 @@ void bigint_bitxor(bigint_t a, bigint_t b, bigint_t output) {
   }
 }
 
-void bigint_bitnot(bigint_t a, bigint_t output) {
+void bigint_bitnot(const bigint_t a, bigint_t output) {
   assert(a.count == output.count);
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -307,7 +340,7 @@ void bigint_bitnot(bigint_t a, bigint_t output) {
 
 // for each bit: same -> same, different -> 10
 // and counts the amount of different bits
-byte_diff_result_t diff_byte(uint8_t a, uint8_t b) {
+byte_diff_result_t diff_byte(const uint8_t a, const uint8_t b) {
   uint8_t xor = a ^ b;
 
   uint16_t diff = 0;
@@ -347,7 +380,7 @@ byte_diff_result_t diff_byte(uint8_t a, uint8_t b) {
 
 // for each 2bits: same -> same, different -> 10
 // and counts the amount of different 2bits
-byte_diff_result_t diff_diff(uint16_t a, uint16_t b) {
+byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
   uint16_t xor = a ^ b;
 
   uint16_t diff = 0;
@@ -385,17 +418,21 @@ byte_diff_result_t diff_diff(uint16_t a, uint16_t b) {
   };
 }
 
+bigint_diff_t bigint_diff_from_allocation(void* restrict allocation, INPUT_SIZE_TYPE size) {
+  return (bigint_diff_t) {
+    .ptr = allocation,
+    .count = size
+  };
+}
+
 void bigint_diff_destroy(bigint_diff_t diff) {
   free(diff.ptr);
 }
 
-bigint_diff_result_t bigint_diff(bigint_t a, bigint_t b) {
+INPUT_SIZE_TYPE bigint_diff_into(const bigint_t a, const bigint_t b, bigint_diff_t diff) {
   assert(a.count == b.count);
+  assert(a.count == diff.count);
 
-  bigint_diff_t diff = {
-    .ptr = calloc(a.count, sizeof(uint16_t)),
-    .count = a.count
-  };
   INPUT_SIZE_TYPE count = 0;
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -404,19 +441,13 @@ bigint_diff_result_t bigint_diff(bigint_t a, bigint_t b) {
     count += result.count;
   }
 
-  return (bigint_diff_result_t) {
-    .diff = diff,
-    .count = count
-  };
+  return count;
 }
 
-bigint_diff_result_t bigint_diff_diff(bigint_diff_t a, bigint_diff_t b) {
+INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const bigint_diff_t b, bigint_diff_t diff) {
   assert(a.count == b.count);
+  assert(a.count == diff.count);
 
-  bigint_diff_t diff = {
-    .ptr = calloc(a.count, sizeof(uint16_t)),
-    .count = a.count
-  };
   INPUT_SIZE_TYPE count = 0;
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -425,10 +456,26 @@ bigint_diff_result_t bigint_diff_diff(bigint_diff_t a, bigint_diff_t b) {
     count += result.count;
   }
 
-  return (bigint_diff_result_t) {
-    .diff = diff,
-    .count = count
-  };
+  return count;
+}
+
+uint16_t byte_into_diff(const uint8_t num) {
+  return (num & 0b10000000) << 7
+       | (num & 0b01000000) << 6
+       | (num & 0b00100000) << 5
+       | (num & 0b00010000) << 4
+       | (num & 0b00001000) << 3
+       | (num & 0b00000100) << 2
+       | (num & 0b00000010) << 1
+       | (num & 0b00000001) << 0;
+}
+
+void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
+  assert(num.count == diff.count);
+
+  for (size_t i = 0; i < num.count; ++i) {
+    diff.ptr[i] = byte_into_diff(num.ptr[i]);
+  }
 }
 
 #endif // BIGINT_IMPLEMENTATION
