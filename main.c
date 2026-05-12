@@ -14,6 +14,9 @@ void wrapper(uint8_t* input, uint8_t* output) {
 }
 
 void print_truthtable(uint8_t*, ptrdiff_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, int);
+void print_prime_implicants(da_header_t, INPUT_SIZE_TYPE, size_t, int, INPUT_SIZE_TYPE);
+void print_diff_group(da_header_t, INPUT_SIZE_TYPE, int, int, size_t, INPUT_SIZE_TYPE);
+void print_bigint_group(da_header_t, INPUT_SIZE_TYPE, int, int, size_t, INPUT_SIZE_TYPE);
 // void print_size(unsigned long long);
 
 int main() {
@@ -50,8 +53,8 @@ int main() {
 
   da_header_t minterms = da_with_capacity(inputmax, inputbytes);
   da_header_t dontcares = da_with_capacity(1, inputbytes); // not used unless user defines some
-  da_header_t finals = da_with_capacity(inputmax, final_element_size);
-  if (!minterms.ptr || !dontcares.ptr || !finals.ptr) { puts("ERROR: Allocation failed"); return 1; }
+  da_header_t prime_implicants = da_with_capacity(inputmax, final_element_size);
+  if (!minterms.ptr || !dontcares.ptr || !prime_implicants.ptr) { puts("ERROR: Allocation failed"); return 1; }
 
   for (INPUT_SIZE_TYPE bit = 0; bit < outputbits; ++bit) {
     printf("\n-------------------------------- Bit %*u --------------------------------\n", inputcharlen, bit);
@@ -100,7 +103,7 @@ int main() {
       memset(((uint8_t*) bucket->ptr) + (bucket->count - 1) * element_size + element_size - sizeof(bool), false, sizeof(bool));
     }
 
-    size_t depth = 0;
+    INPUT_SIZE_TYPE depth = 0;
     size_t pushed = 0;
 
     da_header_t next_group = group_new(inputbits - 1, next_element_size);
@@ -138,58 +141,25 @@ int main() {
       }
     }
 
-    printf("\n+");
-    for (size_t i = 0; i < inputcharlen; ++i) putc('-', stdout);
-    printf("---------+\n| depth: %*zu |\n", inputcharlen, depth);
-    size_t c1 = 2 + inputcharlen;
-    size_t c2 = 2 + inputncharlen;
-    size_t c3 = inputbytes * 8 + 2 + 2;
-    putc('+', stdout);
-    for (size_t i = 0; i < c1; ++i) putc('-', stdout);
-    putc('+', stdout);
-    for (size_t i = 0; i < c2; ++i) putc('-', stdout);
-    putc('+', stdout);
-    for (size_t i = 0; i < c3; ++i) putc('-', stdout);
-    printf("+\n");
+    print_bigint_group(group, inputbytes, inputcharlen, inputncharlen, element_size, depth);
     for (size_t i = 0; i < group.count; ++i) {
       da_header_t* bucket = da_get(group, i, sizeof(da_header_t));
 
       for (size_t j = 0; j < bucket->count; ++j) {
-
-        if (!j) printf("| %*zu | ", inputcharlen, i);
-        else {
-          printf("| ");
-          for (size_t i = 0; i < inputcharlen; ++i) putc(' ', stdout);
-          printf(" | ");
-        }
-
         uint8_t* num_ptr = da_get(*bucket, j, element_size);
         bigint_t num = bigint_from_allocation(num_ptr, inputbytes);
         bool used = *(num_ptr + element_size - sizeof(bool));
 
-        printf("%*td | ", inputncharlen, bigint_into_ptrdiff(num));
-
-        if (used) {
-          bigint_print_binary(num, " / |\n");
-        } else {
-          bigint_print_binary(num, "   |\n");
-
+        if (!used) {
           bigint_into_diff(num, diff_result);
           memset(scratch, 0, final_element_size);
           memcpy(scratch, diff_result.ptr, inputbytes * sizeof(uint16_t));
           memcpy((uint8_t*) scratch + inputbytes * sizeof(uint16_t), num.ptr, inputbytes);
 
-          da_push(&finals, scratch, final_element_size);
+          da_push(&prime_implicants, scratch, final_element_size);
         }
       }
     }
-    putc('+', stdout);
-    for (size_t i = 0; i < c1; ++i) putc('-', stdout);
-    putc('+', stdout);
-    for (size_t i = 0; i < c2; ++i) putc('-', stdout);
-    putc('+', stdout);
-    for (size_t i = 0; i < c3; ++i) putc('-', stdout);
-    printf("+\n");
 
     group_destroy(group);
 
@@ -236,116 +206,42 @@ int main() {
         }
       }
 
-      printf("\n+");
-      for (size_t i = 0; i < inputcharlen; ++i) putc('-', stdout);
-      printf("---------+\n| depth: %*zu |\n", inputcharlen, depth);
-      size_t c1 = 2 + inputcharlen;
-      size_t c2 = 2 + (2 + inputncharlen) * ((size_t) 1 << depth) - 1;
-      size_t c3 = inputbytes * 8 + 2 + 2;
-      putc('+', stdout);
-      for (size_t i = 0; i < c1; ++i) putc('-', stdout);
-      putc('+', stdout);
-      for (size_t i = 0; i < c2; ++i) putc('-', stdout);
-      putc('+', stdout);
-      for (size_t i = 0; i < c3; ++i) putc('-', stdout);
-      printf("+\n");
+      print_diff_group(group, inputbytes, inputcharlen, inputncharlen, element_size, depth);
       for (size_t i = 0; i < group.count; ++i) {
         da_header_t* bucket = da_get(group, i, sizeof(da_header_t));
 
         for (size_t j = 0; j < bucket->count; ++j) {
-          if (!j) printf("| %*zu | ", inputcharlen, i);
-          else {
-            printf("| ");
-            for (size_t i = 0; i < inputcharlen; ++i) putc(' ', stdout);
-            printf(" | ");
-          }
-
           uint8_t* diff_ptr = da_get(*bucket, j, element_size);
-          bigint_diff_t diff = bigint_diff_from_allocation(diff_ptr, inputbytes);
           bool used = *(diff_ptr + element_size - sizeof(bool));
 
-          for (size_t n = 0; n < (size_t) 1 << depth; ++n)
-            printf("%*td, ", inputncharlen, bigint_into_ptrdiff(bigint_from_allocation(diff_ptr + inputbytes * sizeof(uint16_t) + n * inputbytes, inputbytes)));
-          printf("| ");
-
-          if (used) {
-            bigint_diff_print(diff, " / |\n");
-          } else {
-            bigint_diff_print(diff, "   |\n");
-
+          if (!used) {
             memset(scratch, 0, final_element_size);
             memcpy(scratch, diff_ptr, element_size);
 
-            da_push(&finals, scratch, final_element_size);
+            da_push(&prime_implicants, scratch, final_element_size);
           }
         }
       }
-      putc('+', stdout);
-      for (size_t i = 0; i < c1; ++i) putc('-', stdout);
-      putc('+', stdout);
-      for (size_t i = 0; i < c2; ++i) putc('-', stdout);
-      putc('+', stdout);
-      for (size_t i = 0; i < c3; ++i) putc('-', stdout);
-      printf("+\n");
 
       group_destroy(group);
       group = next_group;
     }
 
-    printf("\n+");
-    for (size_t i = 0; i < 20 + inputncharlen; ++i) putc('-', stdout);
-    printf("+\n");
-    printf("| Prime implicants: %*zu |\n", inputncharlen, finals.count);
-    putc('+', stdout);
-    size_t max_ids = (size_t) 1 << depth;
-    size_t c = 4 + inputbytes * 8 + (2 + inputncharlen) * max_ids;
-    size_t m = c;
-    if (c < 20 + inputncharlen) m = 20 + inputncharlen;
-    for (size_t i = 0; i < m; ++i) putc('-', stdout);
-    printf("+\n");
-
-    for (size_t i = 0; i < finals.count; ++i) {
-      uint8_t* implicant_ptr = da_get(finals, i, final_element_size);
-      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
-      bigint_diff_t implicant = bigint_diff_from_allocation(implicant_ptr, inputbytes);
-
-      size_t ids_count;
-      for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-        bigint_t num = bigint_from_allocation(ids_ptr + ids_count * inputbytes, inputbytes);
-        if (bigint_equals_zero(num)) break;
-      }
-      size_t skipped = max_ids - ids_count;
-
-      printf("| ");
-      for (size_t n = 0; n < skipped; ++n) {
-        for (size_t j = 0; j < inputncharlen; ++j) putc(' ', stdout);
-        printf("  ");
-      }
-      for (size_t n = 0; n < max_ids - skipped; ++n) {
-        bigint_t id = bigint_from_allocation(ids_ptr + n * inputbytes, inputbytes);
-        printf("%*td, ", inputncharlen, bigint_into_ptrdiff(id));
-      }
-      printf("| ");
-      bigint_diff_print(implicant, " |\n");
-    }
-
-    putc('+', stdout);
-    for (size_t i = 0; i < c; ++i) putc('-', stdout);
-    printf("+\n");
+    print_prime_implicants(prime_implicants, inputbytes, final_element_size, inputncharlen, depth);
 
     bigint_diff_destroy(diff_result);
 
     group_destroy(group);
     minterms.count = 0;
     dontcares.count = 0;
-    finals.count = 0;
+    prime_implicants.count = 0;
   }
 
   free(truthtable);
   free(scratch);
   da_destroy(minterms);
   da_destroy(dontcares);
-  da_destroy(finals);
+  da_destroy(prime_implicants);
 
   puts("\nExiting without errors");
   return 0;
@@ -381,6 +277,139 @@ void print_truthtable(uint8_t* truthtable, ptrdiff_t inputmax, INPUT_SIZE_TYPE i
   for (size_t i = 0; i < c2; ++i) putc('-', stdout);
   putc('+', stdout);
   putc('\n', stdout);
+}
+
+void print_prime_implicants(da_header_t prime_implicants, INPUT_SIZE_TYPE inputbytes, size_t final_element_size, int inputncharlen, INPUT_SIZE_TYPE depth) {
+  printf("\n+");
+  for (int i = 0; i < 20 + inputncharlen; ++i) putc('-', stdout);
+  printf("+\n");
+  printf("| Prime implicants: %*zu |\n", inputncharlen, prime_implicants.count);
+  putc('+', stdout);
+  size_t max_ids = (size_t) 1 << depth;
+  int c = 4 + inputbytes * 8 + (2 + inputncharlen) * max_ids;
+  size_t m = c;
+  if (c < 20 + inputncharlen) m = 20 + inputncharlen;
+  for (size_t i = 0; i < m; ++i) putc('-', stdout);
+  printf("+\n");
+
+  for (size_t i = 0; i < prime_implicants.count; ++i) {
+    uint8_t* implicant_ptr = da_get(prime_implicants, i, final_element_size);
+    uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+    bigint_diff_t implicant = bigint_diff_from_allocation(implicant_ptr, inputbytes);
+
+    size_t ids_count;
+    for (ids_count = 1; ids_count < max_ids; ++ids_count) {
+      bigint_t num = bigint_from_allocation(ids_ptr + ids_count * inputbytes, inputbytes);
+      if (bigint_equals_zero(num)) break;
+    }
+    size_t skipped = max_ids - ids_count;
+
+    printf("| ");
+    for (size_t n = 0; n < skipped; ++n) {
+      for (int j = 0; j < inputncharlen; ++j) putc(' ', stdout);
+      printf("  ");
+    }
+    for (size_t n = 0; n < max_ids - skipped; ++n) {
+      bigint_t id = bigint_from_allocation(ids_ptr + n * inputbytes, inputbytes);
+      printf("%*td, ", inputncharlen, bigint_into_ptrdiff(id));
+    }
+    printf("| ");
+    bigint_diff_print(implicant, " |\n");
+  }
+
+  putc('+', stdout);
+  for (int i = 0; i < c; ++i) putc('-', stdout);
+  printf("+\n");
+}
+
+void print_diff_group(da_header_t group, INPUT_SIZE_TYPE inputbytes, int inputcharlen, int inputncharlen, size_t element_size, INPUT_SIZE_TYPE depth) {
+  printf("\n+");
+  for (int i = 0; i < inputcharlen; ++i) putc('-', stdout);
+  printf("---------+\n| depth: %*u |\n", inputcharlen, depth);
+  size_t c1 = 2 + inputcharlen;
+  size_t c2 = 2 + (2 + inputncharlen) * ((size_t) 1 << depth) - 1;
+  size_t c3 = inputbytes * 8 + 2 + 2;
+  putc('+', stdout);
+  for (size_t i = 0; i < c1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+  for (size_t i = 0; i < group.count; ++i) {
+    da_header_t* bucket = da_get(group, i, sizeof(da_header_t));
+
+    for (size_t j = 0; j < bucket->count; ++j) {
+      if (!j) printf("| %*zu | ", inputcharlen, i);
+      else {
+        printf("| ");
+        for (int i = 0; i < inputcharlen; ++i) putc(' ', stdout);
+        printf(" | ");
+      }
+
+      uint8_t* diff_ptr = da_get(*bucket, j, element_size);
+      bigint_diff_t diff = bigint_diff_from_allocation(diff_ptr, inputbytes);
+      bool used = *(diff_ptr + element_size - sizeof(bool));
+
+      for (size_t n = 0; n < (size_t) 1 << depth; ++n)
+        printf("%*td, ", inputncharlen, bigint_into_ptrdiff(bigint_from_allocation(diff_ptr + inputbytes * sizeof(uint16_t) + n * inputbytes, inputbytes)));
+      printf("| ");
+
+      if (used) bigint_diff_print(diff, " / |\n");
+      else bigint_diff_print(diff, "   |\n");
+    }
+  }
+  putc('+', stdout);
+  for (size_t i = 0; i < c1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+}
+
+void print_bigint_group(da_header_t group, INPUT_SIZE_TYPE inputbytes, int inputcharlen, int inputncharlen, size_t element_size, INPUT_SIZE_TYPE depth) {
+  printf("\n+");
+  for (int i = 0; i < inputcharlen; ++i) putc('-', stdout);
+  printf("---------+\n| depth: %*u |\n", inputcharlen, depth);
+  size_t c1 = 2 + inputcharlen;
+  size_t c2 = 2 + inputncharlen;
+  size_t c3 = inputbytes * 8 + 2 + 2;
+  putc('+', stdout);
+  for (size_t i = 0; i < c1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+  for (size_t i = 0; i < group.count; ++i) {
+    da_header_t* bucket = da_get(group, i, sizeof(da_header_t));
+
+    for (size_t j = 0; j < bucket->count; ++j) {
+      if (!j) printf("| %*zu | ", inputcharlen, i);
+      else {
+        printf("| ");
+        for (int i = 0; i < inputcharlen; ++i) putc(' ', stdout);
+        printf(" | ");
+      }
+
+      uint8_t* num_ptr = da_get(*bucket, j, element_size);
+      bigint_t num = bigint_from_allocation(num_ptr, inputbytes);
+      bool used = *(num_ptr + element_size - sizeof(bool));
+
+      printf("%*td | ", inputncharlen, bigint_into_ptrdiff(num));
+
+      if (used) bigint_print_binary(num, " / |\n");
+      else bigint_print_binary(num, "   |\n");
+    }
+  }
+  putc('+', stdout);
+  for (size_t i = 0; i < c1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
 }
 
 // void print_size(unsigned long long bytes) {
