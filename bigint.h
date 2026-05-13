@@ -43,7 +43,7 @@ void bigint_copy_into(const bigint_t, bigint_t);
 INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t);
 uint8_t bigint_inc(bigint_t);
 uint8_t bigint_inc_into(const bigint_t, bigint_t);
-ptrdiff_t bigint_into_ptrdiff(const bigint_t);
+uintptr_t bigint_into_ptrdiff(const bigint_t);
 bool bigint_get_bit(const bigint_t, INPUT_SIZE_TYPE);
 
 void bigint_print_binary(const bigint_t, const char*);
@@ -82,6 +82,8 @@ void diff_print(const uint16_t, const char* restrict);
 void bigint_diff_print_binary(const bigint_diff_t, const char* restrict);
 void bigint_diff_format(const bigint_diff_t, char* restrict);
 void bigint_diff_print(const bigint_diff_t, const char* restrict);
+
+bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
 
 #endif // BIGINT_H
 
@@ -266,13 +268,13 @@ uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
   return carry;
 }
 
-ptrdiff_t bigint_into_ptrdiff(const bigint_t num) {
-  assert(num.count <= sizeof(ptrdiff_t));
-  assert(num.count < sizeof(ptrdiff_t) || (num.ptr[num.count-1] & 0b10000000) == 0);
-  ptrdiff_t ptr = 0;
+uintptr_t bigint_into_ptrdiff(const bigint_t num) {
+  assert(num.count <= sizeof(uintptr_t));
+  assert(num.count < sizeof(uintptr_t) || (num.ptr[num.count-1] & 0b10000000) == 0);
+  uintptr_t ptr = 0;
 
   for (size_t i = 0; i < num.count; ++i) {
-    ptr += ((ptrdiff_t) num.ptr[i]) << 8 * i;
+    ptr += ((uintptr_t) num.ptr[i]) << 8 * i;
   }
 
   return ptr;
@@ -295,9 +297,9 @@ bool bigint_equals(const bigint_t a, const bigint_t b) {
   return true;
 }
 
-bool bigint_equals_zero(const bigint_t a) {
-  for (size_t i = 0; i < a.count; ++i) {
-    if (a.ptr[i] != 0) return false;
+bool bigint_equals_zero(const bigint_t num) {
+  for (size_t i = 0; i < num.count; ++i) {
+    if (num.ptr[i] != 0) return false;
   }
 
   return true;
@@ -476,6 +478,16 @@ void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
   for (size_t i = 0; i < num.count; ++i) {
     diff.ptr[i] = byte_into_diff(num.ptr[i]);
   }
+}
+
+bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t b) {
+  assert(a.count == b.count);
+
+  for (size_t i = 0; i < a.count; ++i) {
+    if (a.ptr[i] != b.ptr[i]) return false;
+  }
+
+  return true;
 }
 
 #endif // BIGINT_IMPLEMENTATION

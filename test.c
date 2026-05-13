@@ -155,39 +155,46 @@ int main() {
   //
   // bigint_destroy(a);
 
-  void* arr = dynamic_array_with_capacity(1, sizeof(uint16_t));
-  // printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_header_t arr = da_with_capacity(1, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
 
   uint16_t temp = 17;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 69;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 70;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 71;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 72;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 73;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 74;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
   temp = 75;
-  dynamic_array_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", dynamic_array_capacity(arr));
+  da_push(&arr, &temp, sizeof(uint16_t));
+  printf("cap: %zu\n", arr.capacity);
 
-  for (size_t i = 0; i < dynamic_array_len(arr); ++i) {
-    printf("%u\n", ((uint16_t*) arr)[i]);
+  for (size_t i = 0; i < arr.count; ++i) {
+    printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
   }
 
-  dynamic_array_destroy(arr);
+  da_swap_remove(&arr, 3, sizeof(uint16_t));
+
+  printf("\n");
+  for (size_t i = 0; i < arr.count; ++i) {
+    printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
+  }
+
+  da_destroy(arr);
 
   // for (size_t i = 0; i < 3; ++i) {
   //   size_t m = 1 << i;

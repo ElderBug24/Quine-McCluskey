@@ -19,6 +19,7 @@ void da_reserve(da_header_t*, size_t, size_t);
 
 void da_push(da_header_t* restrict, void* restrict, size_t);
 void* da_get(da_header_t, size_t, size_t);
+void da_swap_remove(da_header_t*, size_t, size_t);
 
 da_header_t group_new(size_t, size_t);
 void group_destroy(da_header_t);
@@ -68,12 +69,16 @@ void da_push(da_header_t* restrict arr, void* restrict element, size_t size) {
 }
 
 void* da_get(da_header_t arr, size_t index, size_t size) {
-  // if (!(index < arr.capacity)) {
-  //   printf("%zu / %zu\n", index, arr.capacity);
-  // }
   assert(index < arr.capacity);
 
   return (void*) ((uint8_t*) arr.ptr + index * size);
+}
+
+void da_swap_remove(da_header_t* arr, size_t index, size_t size) {
+  assert(index < arr->capacity);
+
+  memcpy(da_get(*arr, index, size), da_get(*arr, arr->count - 1, size), size);
+  arr->count -= 1;
 }
 
 da_header_t group_new(size_t max_bits, size_t size) {
