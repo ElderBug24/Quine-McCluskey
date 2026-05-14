@@ -33,9 +33,18 @@ int main() {
   constexpr INPUT_SIZE_TYPE  inputbytes = ( inputbits + 7) / 8;
   constexpr INPUT_SIZE_TYPE outputbytes = (outputbits + 7) / 8;
   constexpr uintptr_t inputmax = (size_t) 1 << inputbits;
-  constexpr size_t final_element_size = inputbytes * sizeof(uint16_t) + (inputbytes << inputbits) + sizeof(bool);
+  constexpr size_t final_element_size = inputbytes * sizeof(uint16_t) + (inputbytes << inputbits) + sizeof(INPUT_SIZE_TYPE) + sizeof(bool);
   constexpr unsigned int inputcharlen = 2; // inputbits < 10 ^ inputcharlen - 1
   constexpr unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen - 1
+
+  static_assert(inputbits);
+  static_assert(outputbits);
+  static_assert(inputbytes);
+  static_assert(outputbytes);
+  static_assert(inputmax);
+  static_assert(final_element_size);
+  static_assert(inputcharlen);
+  static_assert(inputncharlen);
 
   static_assert(inputbits <= sizeof(uintptr_t) * 8, "This system can not handle so many bits");
 
@@ -79,8 +88,10 @@ int main() {
     temp = 6; da_push(&minterms, &temp, sizeof(uint8_t));
     temp = 9; da_push(&minterms, &temp, sizeof(uint8_t));
     temp = 10; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 11; da_push(&minterms, &temp, sizeof(uint8_t));
+    // temp = 11; da_push(&minterms, &temp, sizeof(uint8_t));
     temp = 13; da_push(&minterms, &temp, sizeof(uint8_t));
+    temp = 03; da_push(&minterms, &temp, sizeof(uint8_t));
+    temp = 14; da_push(&minterms, &temp, sizeof(uint8_t));
 
     temp = 2; da_push(&dontcares, &temp, sizeof(uint8_t));
     temp = 12; da_push(&dontcares, &temp, sizeof(uint8_t));
@@ -219,6 +230,8 @@ int main() {
           if (!used) {
             memset(scratch, 0, final_element_size);
             memcpy(scratch, diff_ptr, element_size);
+            INPUT_SIZE_TYPE temp = depth;
+            memcpy((uint8_t*) scratch + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE), &temp, sizeof(INPUT_SIZE_TYPE));
 
             push_prime_implicant(&prime_implicants, scratch, inputbytes, final_element_size);
           }
@@ -235,20 +248,16 @@ int main() {
     da_reserve(&final_minterms, minterms.count, inputbytes);
     da_reserve(&final_implicants, prime_implicants.count, final_element_size);
 
-    size_t max_ids = (size_t) 1 << depth;
     for (size_t i = 0; i < minterms.count; ++i) {
       bigint_t minterm = bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes);
       size_t sum = 0;
       size_t last_j = 0;
 
       for (size_t j = 0; j < prime_implicants.count; ++j) {
-        uint8_t* ids_ptr = (uint8_t*) da_get(prime_implicants, j, final_element_size) + inputbytes * sizeof(uint16_t);
+        uint8_t* implicant_ptr = da_get(prime_implicants, j, final_element_size);
+        uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
 
-        size_t ids_count;
-        for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-          bigint_t num = bigint_from_ptr(ids_ptr + ids_count * inputbytes, inputbytes);
-          if (bigint_equals_zero(num)) break;
-        }
+        size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
         for (size_t n = 0; n < ids_count; ++n) {
           bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
@@ -273,17 +282,11 @@ int main() {
       uint8_t* implicant_ptr = da_get(prime_implicants, i, final_element_size);
 
       if (*(bool*) (implicant_ptr + final_element_size - sizeof(bool))) {
-        bigint_diff_print(bigint_diff_from_ptr(implicant_ptr, inputbytes), " is essential\n");
-
         da_push(&final_diffs, implicant_ptr, inputbytes * sizeof(uint16_t));
 
-        uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
-        size_t ids_count;
-        for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-          bigint_t num = bigint_from_ptr(ids_ptr + ids_count * inputbytes, inputbytes);
-          if (bigint_equals_zero(num)) break;
-        }
+        size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
+        uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
         for (size_t n = 0; n < ids_count; ++n) {
           bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
 
@@ -300,23 +303,12 @@ int main() {
       }
     }
 
-    puts("Final diffs:");
-    for (size_t i = 0; i < final_diffs.count; ++i) {
-      bigint_diff_t diff = bigint_diff_from_ptr(da_get(final_diffs, i, inputbytes * sizeof(uint16_t)), inputbytes);
-
-      bigint_diff_print(diff, "\n");
-    }
-
     puts("Final minterms:");
     for (size_t i = 0; i < final_minterms.count; ++i) {
       bigint_t minterm = bigint_from_ptr(da_get(final_minterms, i, inputbytes), inputbytes);
 
       printf("%" PRIuPTR " ", bigint_into_ptrdiff(minterm));
     }
-
-    print_prime_implicants(final_implicants, depth, inputbytes, inputncharlen, final_element_size);
-
-    print_prime_implicants(prime_implicants, depth, inputbytes, inputncharlen, final_element_size);
 
     print_prime_implicant_chart_essentials(prime_implicants, minterms, depth, inputbytes, inputncharlen, final_element_size);
 
@@ -366,12 +358,11 @@ static inline uint8_t* compute_truthtable(INPUT_SIZE_TYPE inputbytes, INPUT_SIZE
 
 static inline void push_prime_implicant(da_header_t* prime_implicants, uint8_t* scratch, INPUT_SIZE_TYPE inputbytes, size_t final_element_size) {
   bigint_diff_t diff = bigint_diff_from_ptr(scratch, inputbytes);
-  bigint_diff_t diff2 = bigint_diff_from_ptr(prime_implicants->ptr, inputbytes);
 
   for (size_t i = 0; i < prime_implicants->count; ++i) {
-    if (bigint_diff_equals(diff, diff2)) return;
+    bigint_diff_t diff2 = bigint_diff_from_ptr(da_get(*prime_implicants, i, final_element_size), inputbytes);
 
-    diff2.ptr += final_element_size;
+    if (bigint_diff_equals(diff, diff2)) return;
   }
 
   da_push(prime_implicants, scratch, final_element_size);
@@ -428,11 +419,7 @@ static inline void print_prime_implicants(da_header_t prime_implicants, INPUT_SI
     uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
     bigint_diff_t implicant = bigint_diff_from_ptr(implicant_ptr, inputbytes);
 
-    size_t ids_count;
-    for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-      bigint_t num = bigint_from_ptr(ids_ptr + ids_count * inputbytes, inputbytes);
-      if (bigint_equals_zero(num)) break;
-    }
+    size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
     size_t skipped = max_ids - ids_count;
 
     printf("| ");
@@ -461,7 +448,7 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
   size_t max_ids = (size_t) 1 << depth;
 
   size_t c1 = 2 + (2 + inputncharlen) * max_ids;
-  size_t c2 = 2 + (size_t) inputbytes * 8;
+  size_t c2 = 4 + (size_t) inputbytes * 8;
   size_t c3 = 1 + w;
 
   char* buffer = malloc(w * h);
@@ -473,13 +460,10 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
     size_t last_j = 0;
 
     for (size_t j = 0; j < prime_implicants.count; ++j) {
-      uint8_t* ids_ptr = (uint8_t*) da_get(prime_implicants, j, final_element_size) + inputbytes * sizeof(uint16_t);
+      uint8_t* implicant_ptr = da_get(prime_implicants, j, final_element_size);
+      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
 
-      size_t ids_count;
-      for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-        bigint_t num = bigint_from_ptr(ids_ptr + ids_count * inputbytes, inputbytes);
-        if (bigint_equals_zero(num)) break;
-      }
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
       for (size_t n = 0; n < ids_count; ++n) {
         bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
@@ -499,7 +483,73 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
     if (sum == 1) {
       size_t x = inputncharlen - 1 + i * (inputncharlen + 1);
       size_t y = last_j * 2;
-      buffer[x + y * w] = 'X';
+      buffer[x + y * w] = '#';
+    }
+  }
+
+  for (size_t i = 0; i < prime_implicants.count; ++i) {
+    uint8_t* implicant_ptr = da_get(prime_implicants, i, final_element_size);
+    bool essential = *(bool*) (implicant_ptr + final_element_size - sizeof(bool));
+
+    if (essential) {
+      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+      size_t minterm_first = 0;
+      size_t minterm_next = 0;
+
+      for (size_t j = 0; j < minterms.count; ++j) {
+        bigint_t minterm = bigint_from_ptr(da_get(minterms, j, inputbytes), inputbytes);
+
+        for (size_t n = 0; n < ids_count; ++n) {
+          bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+
+          if (bigint_equals(id, minterm)) {
+            size_t implicant_first = 0;
+            size_t implicant_next = 0;
+
+            for (size_t k = 0; k < prime_implicants.count; ++k) {
+              uint8_t* implicant_ptr = da_get(prime_implicants, k, final_element_size);
+              uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+              size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+
+              for (size_t n = 0; n < ids_count; ++n) {
+                bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+
+                if (bigint_equals(id, minterm)) {
+                  if (implicant_first) {
+                    implicant_next = k;
+                    size_t x = inputncharlen - 1 + j * (inputncharlen + 1);
+
+                    for (size_t y = implicant_first * 2 - 1; y < implicant_next * 2; ++y) {
+                      if (buffer[x + y * w] != '-') buffer[x + y * w] = '|';
+                    }
+
+                    implicant_first = k + 1;
+                  } else {
+                    implicant_first = k + 1;
+                  }
+
+                  break;
+                }
+              }
+            }
+
+            if (minterm_first) {
+              minterm_next = j;
+
+              for (size_t x = (1 + inputncharlen) * (minterm_first - 1) + 2; x < (1 + inputncharlen) * minterm_next + 1; ++x) {
+                buffer[x + i * 2 * w] = '-';
+              }
+
+              minterm_first = j + 1;
+            } else {
+              minterm_first = j + 1;
+            }
+
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -529,12 +579,9 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
       uint8_t* implicant_ptr = da_get(prime_implicants, i / 2, final_element_size);
       uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
       bigint_diff_t implicant = bigint_diff_from_ptr(implicant_ptr, inputbytes);
+      bool essential = *(bool*) (implicant_ptr + final_element_size - sizeof(bool));
 
-      size_t ids_count;
-      for (ids_count = 1; ids_count < max_ids; ++ids_count) {
-        bigint_t num = bigint_from_ptr(ids_ptr + ids_count * inputbytes, inputbytes);
-        if (bigint_equals_zero(num)) break;
-      }
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
       size_t skipped = max_ids - ids_count;
 
       for (size_t n = 0; n < skipped; ++n) {
@@ -548,6 +595,9 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
 
       printf("| ");
       bigint_diff_print(implicant, " ");
+
+      if (essential) printf("* ");
+      else printf("  ");
     }
 
     printf("| ");
