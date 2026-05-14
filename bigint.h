@@ -34,7 +34,7 @@ typedef struct bigint_t {
 } bigint_t;
 
 bigint_t bigint_new(const INPUT_SIZE_TYPE);
-bigint_t bigint_from_allocation(void* restrict, INPUT_SIZE_TYPE);
+bigint_t bigint_from_ptr(void* restrict, INPUT_SIZE_TYPE);
 void bigint_destroy(bigint_t);
 void bigint_set(bigint_t* restrict, const uint8_t* restrict, const INPUT_SIZE_TYPE);
 bigint_t bigint_clone(const bigint_t);
@@ -65,7 +65,7 @@ typedef struct bigint_diff_t {
   INPUT_SIZE_TYPE count;
 } bigint_diff_t;
 
-bigint_diff_t bigint_diff_from_allocation(void* restrict, INPUT_SIZE_TYPE);
+bigint_diff_t bigint_diff_from_ptr(void* restrict, INPUT_SIZE_TYPE);
 void bigint_diff_destroy(bigint_diff_t);
 
 byte_diff_result_t diff_byte(const uint8_t, const uint8_t);
@@ -92,14 +92,14 @@ bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
 uint8_t uint8_binary_weight(const uint8_t byte) {
   uint8_s bits = *((uint8_s*) &byte);
 
-  return bits.a
-       + bits.b
-       + bits.c
-       + bits.d
-       + bits.e
-       + bits.f
-       + bits.g
-       + bits.h;
+  return(uint8_t) (bits.a
+                 + bits.b
+                 + bits.c
+                 + bits.d
+                 + bits.e
+                 + bits.f
+                 + bits.g
+                 + bits.h);
 }
 
 void format_byte_bits(const uint8_t num, char* restrict output) {
@@ -149,7 +149,7 @@ bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
   };
 }
 
-bigint_t bigint_from_allocation(void* restrict allocation, const INPUT_SIZE_TYPE size) {
+bigint_t bigint_from_ptr(void* restrict allocation, const INPUT_SIZE_TYPE size) {
   return (bigint_t) {
     .ptr = allocation,
     .count = size
@@ -270,7 +270,6 @@ uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
 
 uintptr_t bigint_into_ptrdiff(const bigint_t num) {
   assert(num.count <= sizeof(uintptr_t));
-  assert(num.count < sizeof(uintptr_t) || (num.ptr[num.count-1] & 0b10000000) == 0);
   uintptr_t ptr = 0;
 
   for (size_t i = 0; i < num.count; ++i) {
@@ -351,28 +350,28 @@ byte_diff_result_t diff_byte(const uint8_t a, const uint8_t b) {
 
   dash = xor & 0b10000000;
   diff |= dash << 8 | (~xor & a & 0b10000000) << 7;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b01000000;
   diff |= dash << 7 | (~xor & a & 0b01000000) << 6;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00100000;
   diff |= dash << 6 | (~xor & a & 0b00100000) << 5;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00010000;
   diff |= dash << 5 | (~xor & a & 0b00010000) << 4;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00001000;
   diff |= dash << 4 | (~xor & a & 0b00001000) << 3;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00000100;
   diff |= dash << 3 | (~xor & a & 0b00000100) << 2;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00000010;
   diff |= dash << 2 | (~xor & a & 0b00000010) << 1;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
   dash = xor & 0b00000001;
   diff |= dash << 1 | (~xor & a & 0b00000001) << 0;
-  count += dash != 0;
+  count = (uint8_t)(count + (uint8_t)(dash != 0U));
 
   return (byte_diff_result_t) {
     .diff = diff,
@@ -386,7 +385,7 @@ byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
   uint16_t xor = a ^ b;
 
   uint16_t diff = 0;
-  INPUT_SIZE_TYPE count = 0;
+  uint16_t count = 0;
   uint16_t dash;
 
   dash = (xor & 0b1100000000000000) != 0;
@@ -416,11 +415,11 @@ byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
 
   return (byte_diff_result_t) {
     .diff = diff,
-    .count = count
+    .count = (INPUT_SIZE_TYPE) count
   };
 }
 
-bigint_diff_t bigint_diff_from_allocation(void* restrict allocation, INPUT_SIZE_TYPE size) {
+bigint_diff_t bigint_diff_from_ptr(void* restrict allocation, INPUT_SIZE_TYPE size) {
   return (bigint_diff_t) {
     .ptr = allocation,
     .count = size

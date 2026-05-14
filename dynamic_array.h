@@ -21,7 +21,7 @@ void da_push(da_header_t* restrict, void* restrict, size_t);
 void* da_get(da_header_t, size_t, size_t);
 void da_swap_remove(da_header_t*, size_t, size_t);
 
-da_header_t group_new(size_t, size_t);
+da_header_t group_new(INPUT_SIZE_TYPE, size_t);
 void group_destroy(da_header_t);
 
 static inline size_t binomial_coefficient(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE);
@@ -81,10 +81,10 @@ void da_swap_remove(da_header_t* arr, size_t index, size_t size) {
   arr->count -= 1;
 }
 
-da_header_t group_new(size_t max_bits, size_t size) {
+da_header_t group_new(INPUT_SIZE_TYPE max_bits, size_t size) {
   da_header_t group = da_with_capacity(max_bits + 1, sizeof(da_header_t));
 
-  for (size_t i = 0; i < max_bits + 1; ++i) {
+  for (INPUT_SIZE_TYPE i = 0; i < max_bits + 1; ++i) {
     size_t capacity = binomial_coefficient(i, max_bits);
     da_header_t* bucket = (da_header_t*) da_get(group, i, sizeof(da_header_t));
 
