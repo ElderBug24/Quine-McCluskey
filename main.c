@@ -13,7 +13,6 @@ typedef uint8_t INPUT_SIZE_TYPE; // this type must be able to hold up to inputbi
 typedef void (* wrapper_t)(uint8_t*, uint8_t*);
 
 void wrapper(uint8_t* input, uint8_t* output) {
-  // *output = *input << 2 ^ *input;
   *output = *input;
 }
 
@@ -22,7 +21,7 @@ static inline void push_prime_implicant(da_header_t*, uint8_t*, INPUT_SIZE_TYPE,
 
 static inline void print_truthtable(uint8_t*, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, uintptr_t, unsigned int);
 static inline void print_prime_implicants(da_header_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, size_t);
-static inline void print_prime_implicant_chart_essentials(da_header_t, da_header_t, size_t, INPUT_SIZE_TYPE, unsigned int, size_t);
+static inline void print_prime_implicant_chart_essentials(da_header_t, da_header_t, da_header_t, size_t, INPUT_SIZE_TYPE, unsigned int, size_t);
 static inline void print_diff_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, unsigned int);
 static inline void print_bigint_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, unsigned int);
 // static inline void print_size(unsigned long long);
@@ -48,31 +47,29 @@ int main() {
 
   static_assert(inputbits <= sizeof(uintptr_t) * 8, "This system can not handle so many bits");
 
-  bigint_t  input = bigint_new(inputbytes);
+  bigint_t input = bigint_new(inputbytes);
 
   fputs("Generating truth table... ", stdout);
   uint8_t* truthtable = compute_truthtable(inputbytes, outputbytes, inputmax, wrapper);
 
   void* scratch = malloc(final_element_size);
-  if (!truthtable || !scratch) { puts("\nERROR: Allocation failed"); return 1; }
-  puts("done");
-
-  print_truthtable(truthtable, inputbytes, outputbytes, inputmax, inputncharlen);
-
   da_header_t minterms = da_with_capacity(inputmax, inputbytes);
   da_header_t dontcares = da_with_capacity(1, inputbytes); // not used unless user defines some
   da_header_t prime_implicants = da_with_capacity(inputmax, final_element_size);
   da_header_t final_diffs = da_with_capacity(1, inputbytes * sizeof(uint16_t));
   da_header_t final_minterms = da_with_capacity(1, inputbytes);
   da_header_t final_implicants = da_with_capacity(1, final_element_size);
-  if (!minterms.ptr || !dontcares.ptr || !prime_implicants.ptr || !final_diffs.ptr || !final_minterms.ptr || !final_implicants.ptr) { puts("ERROR: Allocation failed"); return 1; }
+  if (!truthtable || !scratch || !minterms.ptr || !dontcares.ptr || !prime_implicants.ptr || !final_diffs.ptr || !final_minterms.ptr || !final_implicants.ptr) { puts("\nERROR: Allocation failed"); return 1; }
+  puts("done");
+
+  print_truthtable(truthtable, inputbytes, outputbytes, inputmax, inputncharlen);
 
   for (INPUT_SIZE_TYPE bit = 0; bit < outputbits; ++bit) {
     printf("\n-------------------------------- Bit %*u --------------------------------\n", inputcharlen, bit);
     size_t element_size = inputbytes + sizeof(bool);
     size_t next_element_size = inputbytes * sizeof(uint16_t) + (inputbytes << 1) + sizeof(bool);
 
-    da_header_t group = group_new(inputbits, element_size);
+    da_header_t group = group_new(inputbits + 1, element_size);
 
     bigint_set_zero(input);
     // for (uintptr_t i = 0; i < inputmax; ++i, bigint_inc(input)) {
@@ -102,6 +99,7 @@ int main() {
       bigint_t minterm = bigint_from_ptr(minterm_ptr, inputbytes);
 
       INPUT_SIZE_TYPE binary_weight = bigint_binary_weight(minterm);
+      assert(binary_weight <= inputbits + 1);
       da_header_t* bucket = da_get(group, binary_weight, sizeof(da_header_t));
       da_push(bucket, minterm.ptr, element_size);
       memset(((uint8_t*) bucket->ptr) + (bucket->count - 1) * element_size + element_size - sizeof(bool), false, sizeof(bool));
@@ -119,7 +117,7 @@ int main() {
     INPUT_SIZE_TYPE depth = 0;
     size_t pushed = 0;
 
-    da_header_t next_group = group_new(inputbits - 1, next_element_size);
+    da_header_t next_group = group_new(inputbits + 1, next_element_size);
 
     bigint_diff_t diff_result = bigint_diff_from_ptr(malloc(inputbytes * sizeof(uint16_t)), inputbytes);
 
@@ -185,7 +183,7 @@ int main() {
 
       element_size = inputbytes * sizeof(uint16_t) + (inputbytes << depth) + sizeof(bool);
       next_element_size = inputbytes * sizeof(uint16_t) + (inputbytes << (depth + 1)) + sizeof(bool);
-      da_header_t next_group = group_new(inputbits - depth - 1, next_element_size);
+      da_header_t next_group = group_new(inputbits - depth + 1, next_element_size);
 
       for (size_t i = 0; i < group.count - 1; ++i) {
         da_header_t* bucket = da_get(group, i, sizeof(da_header_t));
@@ -241,8 +239,6 @@ int main() {
       group_destroy(group);
       group = next_group;
     }
-
-    print_prime_implicants(prime_implicants, depth, inputbytes, inputncharlen, final_element_size);
 
     da_reserve(&final_diffs, prime_implicants.count / 2, inputbytes * sizeof(uint16_t));
     da_reserve(&final_minterms, minterms.count, inputbytes);
@@ -303,14 +299,7 @@ int main() {
       }
     }
 
-    puts("Final minterms:");
-    for (size_t i = 0; i < final_minterms.count; ++i) {
-      bigint_t minterm = bigint_from_ptr(da_get(final_minterms, i, inputbytes), inputbytes);
-
-      printf("%" PRIuPTR " ", bigint_into_ptrdiff(minterm));
-    }
-
-    print_prime_implicant_chart_essentials(prime_implicants, minterms, depth, inputbytes, inputncharlen, final_element_size);
+    print_prime_implicant_chart_essentials(prime_implicants, minterms, final_minterms, depth, inputbytes, inputncharlen, final_element_size);
 
     bigint_diff_destroy(diff_result);
 
@@ -401,6 +390,8 @@ static inline void print_truthtable(uint8_t* truthtable, INPUT_SIZE_TYPE inputby
 }
 
 static inline void print_prime_implicants(da_header_t prime_implicants, INPUT_SIZE_TYPE depth, INPUT_SIZE_TYPE inputbytes, unsigned int inputncharlen, size_t final_element_size) {
+  if (!prime_implicants.count) return;
+
   printf("\n+");
   for (unsigned int i = 0; i < 20 + inputncharlen; ++i) putc('-', stdout);
   printf("+\n");
@@ -442,7 +433,9 @@ static inline void print_prime_implicants(da_header_t prime_implicants, INPUT_SI
   printf("+\n");
 }
 
-static inline void print_prime_implicant_chart_essentials(da_header_t prime_implicants, da_header_t minterms, size_t depth, INPUT_SIZE_TYPE inputbytes, unsigned int inputncharlen, size_t final_element_size) {
+static inline void print_prime_implicant_chart_essentials(da_header_t prime_implicants, da_header_t minterms, da_header_t final_minterms, size_t depth, INPUT_SIZE_TYPE inputbytes, unsigned int inputncharlen, size_t final_element_size) {
+  if (!minterms.count || !prime_implicants.count) return;
+
   size_t w = minterms.count * ((size_t) inputncharlen + 1);
   size_t h = prime_implicants.count * 2 - 1;
   size_t max_ids = (size_t) 1 << depth;
@@ -537,14 +530,11 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
             if (minterm_first) {
               minterm_next = j;
 
-              for (size_t x = (1 + inputncharlen) * (minterm_first - 1) + 2; x < (1 + inputncharlen) * minterm_next + 1; ++x) {
+              for (size_t x = (1 + inputncharlen) * (minterm_first - 1) + inputncharlen; x < (1 + inputncharlen) * minterm_next + inputncharlen - 1; ++x) {
                 buffer[x + i * 2 * w] = '-';
               }
-
-              minterm_first = j + 1;
-            } else {
-              minterm_first = j + 1;
             }
+            minterm_first = j + 1;
 
             break;
           }
@@ -553,6 +543,7 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
     }
   }
 
+  putc('\n', stdout);
   for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
   putc('+', stdout);
   for (size_t i = 0; i < c3; ++i) putc('-', stdout);
@@ -560,6 +551,31 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
   for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
   printf("| ");
   for (size_t i = 0; i < minterms.count; ++i) printf("%*" PRIuPTR " ", inputncharlen, bigint_into_ptrdiff(bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes)));
+  printf("|\n");
+  for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
+  printf("| ");
+  for (size_t i = 0; i < minterms.count; ++i) {
+    bigint_t minterm = bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes);
+
+    bool used = false;
+    for (size_t j = 0; j < final_minterms.count; ++j) {
+      bigint_t final_minterm = bigint_from_ptr(da_get(final_minterms, j, inputbytes), inputbytes);
+
+      if (bigint_equals(minterm, final_minterm)) {
+        used = true;
+
+        break;
+      }
+    }
+
+    if (used) {
+      for (size_t k = 0; k < inputncharlen + 1; ++k) putc(' ', stdout);
+    } else {
+      for (size_t k = 0; k < inputncharlen - 1; ++k) putc(' ', stdout);
+      putc('*', stdout);
+      putc(' ', stdout);
+    }
+  }
   printf("|\n");
   putc('+', stdout);
   for (size_t i = 0; i < c1 - 1; ++i) putc('-', stdout);
