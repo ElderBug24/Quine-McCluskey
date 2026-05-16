@@ -3,8 +3,7 @@ The function getting solved first gets reduced to a truth table.
 
 Then for each bit, the minterms are identified and get processed and reduced until only the prime implicants are left.
 After the essential implicants get removed (saved aside), the minimal form of the function is determined using Petrick's method.
-At the end the final function gets reconstructed.
-For now only the implicant chart is visualized.
+At the end the final function gets reconstructed in C.
 
 ## See also
 [Quine–McCluskey algorithm](https://en.wikipedia.org/wiki/Quine–McCluskey_algorithm)
@@ -257,5 +256,46 @@ For now only the implicant chart is visualized.
 |                 |            |              |  |    |
 |  4,  5,  6,  7, | 000001-- * |        #--#--x--x    |
 +-----------------+------------+----------------------+
+```
+```c
+void function(uint8_t* input, uint8_t* output) {
+  bool in_0 = (*(input + 0) >> 0) & 1;
+  bool in_1 = (*(input + 0) >> 1) & 1;
+  bool in_2 = (*(input + 0) >> 2) & 1;
+  bool in_3 = (*(input + 0) >> 3) & 1;
+
+  bool out_0 = false
+    || ( true && in_0 && !in_1 && !in_2 && !in_3 )
+    || ( true && !in_0 && in_1 && !in_2 )
+    || ( true && in_0 && in_1 && in_2 )
+    || ( true && in_0 && in_2 && in_3 )
+    || ( true && in_1 && in_3 );
+  bool out_1 = false
+    || ( true && !in_0 && in_2 && !in_3 )
+    || ( true && !in_0 && !in_1 && in_2 )
+    || ( true && !in_1 && !in_3 )
+    || ( true && in_0 && !in_2 );
+  bool out_2 = false
+    || ( true && !in_0 && in_1 && !in_2 && in_3 )
+    || ( true && !in_1 && !in_2 && !in_3 )
+    || ( true && in_0 && !in_1 && !in_2 );
+  bool out_3 = false
+    || ( true && !in_0 && !in_1 && !in_2 && in_3 )
+    || ( true && in_1 && !in_3 )
+    || ( true && in_2 && !in_3 );
+  bool out_4 = false;
+  bool out_5 = false;
+  bool out_6 = false;
+  bool out_7 = false;
+
+  *(output + 0) |= ((uint8_t) out_0) << 0;
+  *(output + 0) |= ((uint8_t) out_1) << 1;
+  *(output + 0) |= ((uint8_t) out_2) << 2;
+  *(output + 0) |= ((uint8_t) out_3) << 3;
+  *(output + 0) |= ((uint8_t) out_4) << 4;
+  *(output + 0) |= ((uint8_t) out_5) << 5;
+  *(output + 0) |= ((uint8_t) out_6) << 6;
+  *(output + 0) |= ((uint8_t) out_7) << 7;
+}
 ```
 
