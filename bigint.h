@@ -90,7 +90,7 @@ bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
 #ifdef BIGINT_IMPLEMENTATION
 
 uint8_t uint8_binary_weight(const uint8_t byte) {
-  uint8_s bits = *((uint8_s*) &byte);
+  uint8_s bits = *(uint8_s*) &byte;
 
   return(uint8_t) (bits.a
                  + bits.b
@@ -119,7 +119,7 @@ void print_byte_bits(const uint8_t num, const char* restrict end) {
   char* str = malloc(8);
   format_byte_bits(*(((uint8_t*) &num) + 1), str);
   printf("%.*s", 8, str);
-  format_byte_bits(*((uint8_t*) &num), str);
+  format_byte_bits(*(uint8_t*) &num, str);
   printf("%.*s%s", 8, str, end);
 
   free(str);
@@ -253,7 +253,7 @@ uint8_t bigint_inc(bigint_t num) {
 
   return carry;
 
-  // return (*((size_t*) num.ptr))++ == 0;
+  // return (*(size_t*) num.ptr)++ == 0;
 }
 
 uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {

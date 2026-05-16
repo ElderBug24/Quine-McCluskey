@@ -6,52 +6,55 @@
 #define DYNAMICARRAY_IMPLEMENTATION
 #include "dynamic_array.h"
 
+#define SOP_IMPLEMENTATION
+#include "sop.h"
 
-void bigint_print_decimal(const bigint_t num) {
-  if (num.count == 0) {
-    putc('0', stdout);
-    return;
-  }
 
-  size_t decimal_len = num.count * 3 + 1;
-  uint8_t* decimal = calloc(decimal_len, 1);
-
-  size_t used = 1;
-  decimal[0] = 0;
-
-  for (size_t i = num.count; i-- > 0;) {
-    uint32_t carry = num.ptr[i];
-
-    for (size_t j = 0; j < used; ++j) {
-      uint32_t value = decimal[j] * 256 + carry;
-      decimal[j] = value % 10;
-      carry = value / 10;
-    }
-
-    while (carry) {
-      decimal[used++] = carry % 10;
-      carry /= 10;
-    }
-  }
-
-  while (used > 1 && decimal[used - 1] == 0) {
-    --used;
-  }
-
-  char* out = malloc(used + 1);
-
-  for (size_t i = 0; i < used; ++i) {
-    out[i] = decimal[used - 1 - i] + '0';
-  }
-
-  out[used] = '\0';
-
-  free(decimal);
-
-  printf("%s", out);
-
-  free(out);
-}
+// void bigint_print_decimal(const bigint_t num) {
+//   if (num.count == 0) {
+//     putc('0', stdout);
+//     return;
+//   }
+//
+//   size_t decimal_len = num.count * 3 + 1;
+//   uint8_t* decimal = calloc(decimal_len, 1);
+//
+//   size_t used = 1;
+//   decimal[0] = 0;
+//
+//   for (size_t i = num.count; i-- > 0;) {
+//     uint32_t carry = num.ptr[i];
+//
+//     for (size_t j = 0; j < used; ++j) {
+//       uint32_t value = decimal[j] * 256 + carry;
+//       decimal[j] = value % 10;
+//       carry = value / 10;
+//     }
+//
+//     while (carry) {
+//       decimal[used++] = carry % 10;
+//       carry /= 10;
+//     }
+//   }
+//
+//   while (used > 1 && decimal[used - 1] == 0) {
+//     --used;
+//   }
+//
+//   char* out = malloc(used + 1);
+//
+//   for (size_t i = 0; i < used; ++i) {
+//     out[i] = decimal[used - 1 - i] + '0';
+//   }
+//
+//   out[used] = '\0';
+//
+//   free(decimal);
+//
+//   printf("%s", out);
+//
+//   free(out);
+// }
 
 int main() {
   // for (uint8_t i = 0; i < 16; ++i) {
@@ -155,46 +158,46 @@ int main() {
   //
   // bigint_destroy(a);
 
-  da_header_t arr = da_with_capacity(1, sizeof(uint16_t));
+  // da_header_t arr = da_with_capacity(1, sizeof(uint16_t));
+  // // printf("cap: %zu\n", arr.capacity);
+  //
+  // uint16_t temp = 17;
+  // da_push(&arr, &temp, sizeof(uint16_t));
   // printf("cap: %zu\n", arr.capacity);
-
-  uint16_t temp = 17;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 69;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 70;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 71;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 72;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 73;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 74;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-  temp = 75;
-  da_push(&arr, &temp, sizeof(uint16_t));
-  printf("cap: %zu\n", arr.capacity);
-
-  for (size_t i = 0; i < arr.count; ++i) {
-    printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
-  }
-
-  da_swap_remove(&arr, 3, sizeof(uint16_t));
-
-  printf("\n");
-  for (size_t i = 0; i < arr.count; ++i) {
-    printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
-  }
-
-  da_destroy(arr);
+  // temp = 69;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 70;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 71;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 72;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 73;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 74;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  // temp = 75;
+  // da_push(&arr, &temp, sizeof(uint16_t));
+  // printf("cap: %zu\n", arr.capacity);
+  //
+  // for (size_t i = 0; i < arr.count; ++i) {
+  //   printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
+  // }
+  //
+  // da_swap_remove(&arr, 3, sizeof(uint16_t));
+  //
+  // printf("\n");
+  // for (size_t i = 0; i < arr.count; ++i) {
+  //   printf("%zu %u\n", i, ((uint16_t*) arr.ptr)[i]);
+  // }
+  //
+  // da_destroy(arr);
 
   // for (size_t i = 0; i < 3; ++i) {
   //   size_t m = 1 << i;
@@ -209,6 +212,27 @@ int main() {
   //   }
   //   puts("");
   // }
+  typedef struct product_t {
+    size_t count;
+    uint8_t terms[];
+  } product_t;
+
+  uint8_t* buffer = calloc(100, 1);
+
+  *(size_t*) buffer = 3;
+  buffer[8] = 69;
+  buffer[9] = 34;
+  buffer[10] = 111;
+
+  product_t* product = (product_t*) buffer;
+
+  printf("%zu\n", product->count);
+  printf("%u\n", product->terms[0]);
+  printf("%u\n", product->terms[1]);
+  printf("%u\n", product->terms[2]);
+  printf("%u\n", product->terms[3]);
+
+  free(buffer);
 
   puts("\nexiting without errors");
   return 0;
