@@ -9,6 +9,8 @@
 #define SOP_IMPLEMENTATION
 #include "sop.h"
 
+#include <string.h>
+
 
 // void bigint_print_decimal(const bigint_t num) {
 //   if (num.count == 0) {
@@ -103,24 +105,24 @@ int main() {
   // cc = diff_computational_cost(diff_result.diff);
   // printf("%u\n", cc);
 
-  bigint_t a = bigint_new(8);
-  bigint_t b = bigint_new(8);
-
-  uint64_t temp = 0b0000000001101011010010010011100001100001101011011011110010011101; // 30198329013812381
-  bigint_set(&a, (uint8_t*) &temp, 8);
-  temp =          0b0000000001101011010010010011100001100001111010000011100010011111;
-  bigint_set(&b, (uint8_t*) &temp, 8);
+  // bigint_t a = bigint_new(8);
+  // bigint_t b = bigint_new(8);
+  //
+  // uint64_t temp = 0b0000000001101011010010010011100001100001101011011011110010011101; // 30198329013812381
+  // bigint_set(&a, (uint8_t*) &temp, 8);
+  // temp =          0b0000000001101011010010010011100001100001111010000011100010011111;
+  // bigint_set(&b, (uint8_t*) &temp, 8);
 
   // puts("0000000001101011010010010011100001100001101011011011110010011101");
-  bigint_print_binary(a, "\n");
-  bigint_print_binary(b, "\n");
+  // bigint_print_binary(a, "\n");
+  // bigint_print_binary(b, "\n");
 
-  bigint_diff_t result = bigint_diff_from_ptr(malloc(16), 8);
-  size_t count = bigint_diff_into(a, b, result);
-  bigint_diff_print(result, "\n");
+  // bigint_diff_t result = bigint_diff_from_ptr(malloc(16), 8);
+  // size_t count = bigint_diff_into(a, b, result);
+  // bigint_diff_print(result, "\n");
   // bigint_diff_print_binary(result.diff, "\n");
-  printf("%zu\n", count);
-  printf("%zu\n", bigint_diff_computational_cost(result));
+  // printf("%zu\n", count);
+  // printf("%zu\n", bigint_diff_computational_cost(result));
 
   // bigint_diff_t diff2 = {
   //   .ptr = malloc(8),
@@ -135,8 +137,8 @@ int main() {
   // bigint_diff_print(result2.diff, "\n");
   // printf("%u\n", result2.count);
 
-  bigint_destroy(a);
-  bigint_destroy(b);
+  // bigint_destroy(a);
+  // bigint_destroy(b);
   // bigint_diff_destroy(result.diff);
   // bigint_diff_destroy(diff2);
 
@@ -241,6 +243,13 @@ int main() {
   // printf("%u\n", product->terms[3]);
   //
   // free(buffer);
+
+  da_header_t arr = da_with_capacity(1, sizeof(char));
+  char* str = "Hello World!";
+
+  printf("%s\n", (char*) arr.ptr);
+  da_push_many(&arr, str, strlen(str) + 1, sizeof(char));
+  printf("%s\n", (char*) arr.ptr);
 
   puts("\nexiting without errors");
   return 0;

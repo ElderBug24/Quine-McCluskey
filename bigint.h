@@ -10,6 +10,8 @@
 #include <stdio.h>
 
 
+inline void exit_error();
+
 typedef struct uint8_s {
   uint8_t a : 1;
   uint8_t b : 1;
@@ -111,6 +113,7 @@ void format_byte_bits(const uint8_t num, char* restrict output) {
 
 void print_byte_bits(const uint8_t num, const char* restrict end) {
   char* str = malloc(8);
+  if (!str) exit_error();
   format_byte_bits(num, str);
   printf("%.*s%s", 8, str, end);
 
@@ -120,6 +123,7 @@ void print_byte_bits(const uint8_t num, const char* restrict end) {
   void print_byte_bits_uint16(const uint16_t num, const char* restrict end) {
   char* str = malloc(8);
   format_byte_bits(*(((uint8_t*) &num) + 1), str);
+  if (!str) exit_error();
   printf("%.*s", 8, str);
   format_byte_bits(*(uint8_t*) &num, str);
   printf("%.*s%s", 8, str, end);
@@ -138,6 +142,7 @@ void format_bits(const void* restrict num, const size_t count, char* restrict ou
 
 void print_bits(const void* restrict num, const size_t count, const char* restrict end) {
   char* str = malloc(count * 8);
+  if (!str) exit_error();
   format_bits(num, count, str);
   printf("%.*s%s", (int) count * 8, str, end);
 
@@ -145,8 +150,10 @@ void print_bits(const void* restrict num, const size_t count, const char* restri
 }
 
 bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
+  void* ptr = calloc(size, 1);
+  if (!ptr) exit_error();
   return (bigint_t) {
-    .ptr = calloc(size, 1),
+    .ptr = ptr,
     .count = size
   };
 }
@@ -199,6 +206,7 @@ INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t num) {
 
 void bigint_print_binary(const bigint_t num, const char* restrict end) {
   char* str = malloc(num.count * 8);
+  if (!str) exit_error();
   format_bits(num.ptr, num.count, str);
   printf("%.*s%s", (int) num.count * 8, str, end);
 
@@ -207,6 +215,7 @@ void bigint_print_binary(const bigint_t num, const char* restrict end) {
 
 void bigint_diff_print_binary(const bigint_diff_t diff, const char* restrict end) {
   char* str = malloc(diff.count * 8 * sizeof(uint16_t));
+  if (!str) exit_error();
   format_bits((uint8_t*) diff.ptr, diff.count * sizeof(uint16_t), str);
   printf("%.*s%s", (int) (diff.count * 8 * sizeof(uint16_t)), str, end);
 
@@ -222,6 +231,7 @@ void diff_format(const uint16_t diff, char* restrict output) {
 
 void diff_print(const uint16_t diff, const char* restrict end) {
   char* str = malloc(8);
+  if (!str) exit_error();
   diff_format(diff, str);
   printf("%.*s%s", (int) 8, str, end);
 
@@ -239,6 +249,7 @@ void bigint_diff_format(const bigint_diff_t diff, char* restrict output) {
 
 void bigint_diff_print(const bigint_diff_t diff, const char* restrict end) {
   char* str = malloc(diff.count * 8);
+  if (!str) exit_error();
   bigint_diff_format(diff, str);
   printf("%.*s%s", (int) diff.count * 8, str, end);
 
