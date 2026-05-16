@@ -39,7 +39,6 @@ bigint_t bigint_new(const INPUT_SIZE_TYPE);
 bigint_t bigint_from_ptr(void* restrict, INPUT_SIZE_TYPE);
 void bigint_destroy(bigint_t);
 void bigint_set(bigint_t* restrict, const uint8_t* restrict, const INPUT_SIZE_TYPE);
-bigint_t bigint_clone(const bigint_t);
 void bigint_copy_into(const bigint_t, bigint_t);
 
 INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t);
@@ -52,10 +51,6 @@ void bigint_print_binary(const bigint_t, const char*);
 
 bool bigint_equals(const bigint_t, const bigint_t);
 bool bigint_equals_zero(const bigint_t);
-void bigint_bitand(const bigint_t, const bigint_t, bigint_t);
-void bigint_bitor(const bigint_t, const bigint_t, bigint_t);
-void bigint_bitxor(const bigint_t, const bigint_t, bigint_t);
-void bigint_bitnot(const bigint_t, const bigint_t);
 
 typedef struct byte_diff_result_t {
   uint16_t diff;
@@ -179,13 +174,6 @@ void bigint_set(bigint_t* restrict num, const uint8_t* restrict ptr, const INPUT
 
 void bigint_set_zero(bigint_t num) {
   memset((void*) num.ptr, 0, num.count);
-}
-
-bigint_t bigint_clone(const bigint_t num) {
-  bigint_t new = bigint_new(num.count);
-  bigint_copy_into(num, new);
-
-  return new;
 }
 
 void bigint_copy_into(const bigint_t num, bigint_t other) {
@@ -315,41 +303,6 @@ bool bigint_equals_zero(const bigint_t num) {
   }
 
   return true;
-}
-
-void bigint_bitand(const bigint_t a, const bigint_t b, bigint_t output) {
-  assert(a.count == b.count);
-  assert(a.count == output.count);
-
-  for (size_t i = 0; i < a.count; ++i) {
-    output.ptr[i] = a.ptr[i] & b.ptr[i];
-  }
-}
-
-void bigint_bitor(const bigint_t a, const bigint_t b, bigint_t output) {
-  assert(a.count == b.count);
-  assert(a.count == output.count);
-
-  for (size_t i = 0; i < a.count; ++i) {
-    output.ptr[i] = a.ptr[i] | b.ptr[i];
-  }
-}
-
-void bigint_bitxor(const bigint_t a, const bigint_t b, bigint_t output) {
-  assert(a.count == b.count);
-  assert(a.count == output.count);
-
-  for (size_t i = 0; i < a.count; ++i) {
-    output.ptr[i] = a.ptr[i] ^ b.ptr[i];
-  }
-}
-
-void bigint_bitnot(const bigint_t a, bigint_t output) {
-  assert(a.count == output.count);
-
-  for (size_t i = 0; i < a.count; ++i) {
-    output.ptr[i] = ~a.ptr[i];
-  }
 }
 
 // for each bit: same -> same, different -> 10
