@@ -6,7 +6,7 @@
 #include <string.h>
 
 
-inline void exit_error();
+inline void exit_error(int);
 
 typedef struct da_header_t {
   size_t count;
@@ -19,6 +19,8 @@ void da_destroy(da_header_t);
 
 void da_reserve_exact(da_header_t*, size_t, size_t);
 void da_reserve(da_header_t*, size_t, size_t);
+void da_reserve_exact_reset(da_header_t*, size_t, size_t);
+void da_reserve_reset(da_header_t*, size_t, size_t);
 
 void da_push(da_header_t* restrict, void* restrict, size_t);
 void da_push_many(da_header_t* restrict, void* restrict, size_t, size_t);
@@ -36,7 +38,7 @@ static inline size_t binomial_coefficient(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE);
 
 da_header_t da_with_capacity(size_t capacity, size_t size) {
   void* ptr = malloc(sizeof(da_header_t) + size * capacity);
-  if (!ptr) exit_error();
+  if (!ptr) exit_error(2);
 
   da_header_t header = (da_header_t) {
     .count = 0,
@@ -53,8 +55,9 @@ void da_destroy(da_header_t arr) {
 
 void da_reserve_exact(da_header_t* arr, size_t capacity, size_t size) {
   if (arr->capacity < capacity) {
+    puts("\n\nREALOC!!!\n\n");
     arr->ptr = realloc(arr->ptr, size * capacity);
-    if (!arr->ptr) exit_error();
+    if (!arr->ptr) exit_error(2);
   }
   arr->capacity = capacity;
 }
@@ -65,6 +68,23 @@ void da_reserve(da_header_t* arr, size_t capacity, size_t size) {
   while (new_capacity < capacity) new_capacity *= 2;
 
   da_reserve_exact(arr, new_capacity, size);
+}
+
+void da_reserve_exact_reset(da_header_t* arr, size_t capacity, size_t size) {
+  if (arr->capacity < capacity) {
+    puts("\n\nREALOC!!!\n\n");
+    arr->ptr = malloc(size * capacity);
+    if (!arr->ptr) exit_error(2);
+  }
+  arr->capacity = capacity;
+}
+
+void da_reserve_reset(da_header_t* arr, size_t capacity, size_t size) {
+  size_t new_capacity = arr->capacity;
+
+  while (new_capacity < capacity) new_capacity *= 2;
+
+  da_reserve_exact_reset(arr, new_capacity, size);
 }
 
 void da_push(da_header_t* restrict arr, void* restrict element, size_t size) {

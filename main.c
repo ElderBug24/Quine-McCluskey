@@ -1,14 +1,13 @@
 #include <stdint.h>
+#include <stdio.h>
+#include <inttypes.h>
+
 typedef uint8_t INPUT_SIZE_TYPE; // this type must be able to hold up to inputbits + 1
 
 #define BIGINT_IMPLEMENTATION
 #include "bigint.h"
 #define DYNAMICARRAY_IMPLEMENTATION
 #include "dynamic_array.h"
-
-#include <stdio.h>
-#include <inttypes.h>
-#include <math.h>
 
 
 typedef void (* wrapper_t)(uint8_t*, uint8_t*);
@@ -19,13 +18,15 @@ typedef struct sop_t {
   size_t* ptr;
 } sop_t;
 
+#include <math.h>
 void wrapper(uint8_t* input, uint8_t* output) {
+  constexpr double PI = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651;
   // *output = *input;
   float x = *input;
-  *output = (uint8_t) (5.0 * sin(x / 3.0) + 6.0);
+  *output = (uint8_t) (8.0 + 6.0 * sin(PI * x / 4.0) + 2.0 * sin(3.0 * PI * x / 8.0));
 }
 
-inline void exit_error();
+inline void exit_error(int);
 static inline uint8_t* compute_truthtable(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, uintptr_t, wrapper_t);
 static inline void push_prime_implicant(da_header_t*, uint8_t*, INPUT_SIZE_TYPE, size_t);
 
@@ -38,7 +39,7 @@ static inline void print_bigint_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPU
 
 int main() {
   constexpr const INPUT_SIZE_TYPE   inputbits = 4;
-  constexpr const INPUT_SIZE_TYPE  outputbits = 8;
+  constexpr const INPUT_SIZE_TYPE  outputbits = 4;
   constexpr const unsigned int inputcharlen  = 2; // inputbits < 10 ^ inputcharlen - 1
   constexpr const unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen - 1
   constexpr const bool compare_all_solutions = false; // will compare all solutions even those with more implicants
@@ -71,7 +72,7 @@ int main() {
   da_header_t solution = da_with_capacity(1, sizeof(size_t));
   da_header_t final_minterms = da_with_capacity(1, inputbytes);
   da_header_t final_implicants = da_with_capacity(1, final_element_size);
-  da_header_t output_str = da_with_capacity(1, sizeof(char));
+  da_header_t output_str = da_with_capacity(4096, sizeof(char));
   if (!truthtable || !scratch || !minterms.ptr || !dontcares.ptr || !prime_implicants.ptr || !solution.ptr || !final_minterms.ptr || !final_implicants.ptr || !output_str.ptr) { puts("\nERROR: Allocation failed"); return 1; }
   puts("done");
 
@@ -109,15 +110,13 @@ int main() {
     // temp = 10; da_push(&minterms, &temp, sizeof(uint8_t));
     // temp = 11; da_push(&minterms, &temp, sizeof(uint8_t));
     // temp = 13; da_push(&minterms, &temp, sizeof(uint8_t));
-    // // temp = 03; da_push(&minterms, &temp, sizeof(uint8_t));
-    // // temp = 14; da_push(&minterms, &temp, sizeof(uint8_t));
     //
     // temp = 2; da_push(&dontcares, &temp, sizeof(uint8_t));
     // temp = 12; da_push(&dontcares, &temp, sizeof(uint8_t));
     // temp = 15; da_push(&dontcares, &temp, sizeof(uint8_t));
 
-    da_reserve(&prime_implicants, minterms.count, final_element_size);
-    da_reserve(&final_implicants, minterms.count, final_element_size);
+    da_reserve_reset(&prime_implicants, minterms.count, final_element_size);
+    da_reserve_reset(&final_implicants, minterms.count, final_element_size);
 
     for (size_t i = 0; i < minterms.count; ++i) {
       uint8_t* minterm_ptr = da_get(minterms, i, inputbytes);
@@ -267,9 +266,9 @@ int main() {
       group = next_group;
     }
 
-    da_reserve(&solution, prime_implicants.count, sizeof(size_t));
-    da_reserve(&final_minterms, minterms.count, inputbytes);
-    da_reserve(&final_implicants, prime_implicants.count, final_element_size);
+    da_reserve_reset(&solution, prime_implicants.count, sizeof(size_t));
+    da_reserve_reset(&final_minterms, minterms.count, inputbytes);
+    da_reserve_reset(&final_implicants, prime_implicants.count, final_element_size);
 
     for (size_t i = 0; i < minterms.count; ++i) {
       bigint_t minterm = bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes);
@@ -518,11 +517,11 @@ int main() {
     da_push_many(&output_str, buffer, strlen(buffer), sizeof(char));
 
     for (size_t i = 0; i < solution.count; ++i) {
-      temp = "\n    || ";
-      da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+      char* str = "\n    || ";
+      da_push_many(&output_str, str, strlen(str), sizeof(char));
 
-      temp = "( true";
-      da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+      str = "( true";
+      da_push_many(&output_str, str, strlen(str), sizeof(char));
 
       size_t implicant_index = *(size_t*) da_get(solution, i, sizeof(size_t));
       uint8_t* implicant_ptr = da_get(prime_implicants, implicant_index, final_element_size);
@@ -533,12 +532,12 @@ int main() {
         uint16_t diff_bit = *(diff.ptr + j / 16) >> ((j % 16) * 2) & 3;
 
         if (!(diff_bit & 2)) {
-          temp = " && ";
-          da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+          str = " && ";
+          da_push_many(&output_str, str, strlen(str), sizeof(char));
 
           if (!diff_bit) {
-            temp = "!";
-            da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+            str = "!";
+            da_push_many(&output_str, str, strlen(str), sizeof(char));
           }
 
           snprintf(buffer, sizeof(buffer), "in_%X", j);
@@ -547,12 +546,12 @@ int main() {
         }
       }
 
-      temp = " )";
-      da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+      str = " )";
+      da_push_many(&output_str, str, strlen(str), sizeof(char));
     }
 
-    temp = ";\n";
-    da_push_many(&output_str, temp, strlen(temp), sizeof(char));
+    char* str = ";\n";
+    da_push_many(&output_str, str, strlen(str), sizeof(char));
 
     bigint_diff_destroy(diff_result);
     group_destroy(group);
@@ -573,14 +572,14 @@ int main() {
   da_destroy(final_minterms);
   da_destroy(final_implicants);
 
-  temp = "\n";
-  da_push(&output_str, temp, sizeof(char));
+  char* str = "\n";
+  da_push(&output_str, str, sizeof(char));
   for (INPUT_SIZE_TYPE i = 0; i < outputbits; ++i) {
     snprintf(buffer, sizeof(buffer), "  *(output + %u) |= ((uint8_t) out_%X) << %u;\n", i / 8, i, i % 8);
     da_push_many(&output_str, buffer, strlen(buffer), sizeof(char));
   }
-  temp = "}";
-  da_push_many(&output_str, temp, strlen(temp) + 1, sizeof(char));
+  str = "}";
+  da_push_many(&output_str, str, strlen(str) + 1, sizeof(char));
   printf("\n%s\n", (char*) output_str.ptr);
 
   da_destroy(output_str);
@@ -589,8 +588,16 @@ int main() {
   return 0;
 }
 
-void exit_error() {
-  puts("\nExiting with unspecified error");
+void exit_error(int e) {
+  switch (e) {
+    case 1:
+      puts("\nExiting with unspecified error");
+      break;
+    case 2:
+      puts("\nError: Allocation failed");
+      break;
+  }
+
   exit(1);
 }
 
