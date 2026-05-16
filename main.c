@@ -10,12 +10,15 @@ typedef uint8_t INPUT_SIZE_TYPE; // this type must be able to hold up to inputbi
 
 #include <stdio.h>
 #include <inttypes.h>
+#include <math.h>
 
 
 typedef void (* wrapper_t)(uint8_t*, uint8_t*);
 
 void wrapper(uint8_t* input, uint8_t* output) {
-  *output = *input;
+  // *output = *input;
+  float x = *input;
+  *output = (uint8_t) (5.0 * sin(x / 3.0) + 6.0);
 }
 
 static inline uint8_t* compute_truthtable(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, uintptr_t, wrapper_t);
@@ -24,19 +27,21 @@ static inline void push_prime_implicant(da_header_t*, uint8_t*, INPUT_SIZE_TYPE,
 static inline void print_truthtable(uint8_t*, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, uintptr_t, unsigned int);
 static inline void print_prime_implicants(da_header_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, size_t);
 static inline void print_prime_implicant_chart_essentials(da_header_t, da_header_t, da_header_t, size_t, INPUT_SIZE_TYPE, unsigned int, size_t);
+static inline void print_prime_implicant_chart_solution(da_header_t, da_header_t, da_header_t, size_t, INPUT_SIZE_TYPE, unsigned int, size_t);
 static inline void print_diff_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, unsigned int);
 static inline void print_bigint_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPUT_SIZE_TYPE, unsigned int, unsigned int);
 // static inline void print_size(unsigned long long);
 
 int main() {
   constexpr INPUT_SIZE_TYPE   inputbits = 4;
-  constexpr INPUT_SIZE_TYPE  outputbits = 1;
+  constexpr INPUT_SIZE_TYPE  outputbits = 4;
   constexpr INPUT_SIZE_TYPE  inputbytes = ( inputbits + 7) / 8;
   constexpr INPUT_SIZE_TYPE outputbytes = (outputbits + 7) / 8;
   constexpr uintptr_t inputmax = (size_t) 1 << inputbits;
   constexpr size_t final_element_size = inputbytes * sizeof(uint16_t) + (inputbytes << inputbits) + sizeof(INPUT_SIZE_TYPE) + sizeof(bool);
   constexpr unsigned int inputcharlen  = 2; // inputbits < 10 ^ inputcharlen - 1
   constexpr unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen - 1
+  constexpr bool compare_all_solutions = false; // will compare all solutions even those with more implicants
 
   static_assert(inputbits);
   static_assert(outputbits);
@@ -58,10 +63,10 @@ int main() {
   da_header_t minterms = da_with_capacity(inputmax, inputbytes);
   da_header_t dontcares = da_with_capacity(1, inputbytes); // not used unless user defines some
   da_header_t prime_implicants = da_with_capacity(1, final_element_size);
-  da_header_t final_diffs = da_with_capacity(1, inputbytes * sizeof(uint16_t));
+  da_header_t solution = da_with_capacity(1, sizeof(size_t));
   da_header_t final_minterms = da_with_capacity(1, inputbytes);
   da_header_t final_implicants = da_with_capacity(1, final_element_size);
-  if (!truthtable || !scratch || !minterms.ptr || !dontcares.ptr || !prime_implicants.ptr || !final_diffs.ptr || !final_minterms.ptr || !final_implicants.ptr) { puts("\nERROR: Allocation failed"); return 1; }
+  if (!truthtable || !scratch || !minterms.ptr || !dontcares.ptr || !prime_implicants.ptr || !solution.ptr || !final_minterms.ptr || !final_implicants.ptr) { puts("\nERROR: Allocation failed"); return 1; }
   puts("done");
 
   print_truthtable(truthtable, inputbytes, outputbytes, inputmax, inputncharlen);
@@ -74,27 +79,27 @@ int main() {
     da_header_t group = group_new(inputbits + 1, element_size);
 
     bigint_set_zero(input);
-    // for (uintptr_t i = 0; i < inputmax; ++i, bigint_inc(input)) {
-    //   bigint_t output = bigint_from_ptr(truthtable + i * outputbytes, outputbytes);
-    //   if (bigint_get_bit(output, bit)) {
-    //     da_push(&minterms, input.ptr, inputbytes);
-    //   }
-    // }
+    for (uintptr_t i = 0; i < inputmax; ++i, bigint_inc(input)) {
+      bigint_t output = bigint_from_ptr(truthtable + i * outputbytes, outputbytes);
+      if (bigint_get_bit(output, bit)) {
+        da_push(&minterms, input.ptr, inputbytes);
+      }
+    }
 
-    minterms.count = 0;
-    uint8_t temp = 0;
-    temp = 4; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 6; da_push(&minterms, &temp, sizeof(uint8_t));
+    // minterms.count = 0;
+    // uint8_t temp = 0;
+    // temp = 4; da_push(&minterms, &temp, sizeof(uint8_t));
+    // temp = 6; da_push(&minterms, &temp, sizeof(uint8_t));
     // temp = 9; da_push(&minterms, &temp, sizeof(uint8_t));
     // temp = 10; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 11; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 13; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 03; da_push(&minterms, &temp, sizeof(uint8_t));
-    temp = 14; da_push(&minterms, &temp, sizeof(uint8_t));
-
-    temp = 2; da_push(&dontcares, &temp, sizeof(uint8_t));
-    temp = 12; da_push(&dontcares, &temp, sizeof(uint8_t));
-    temp = 15; da_push(&dontcares, &temp, sizeof(uint8_t));
+    // temp = 11; da_push(&minterms, &temp, sizeof(uint8_t));
+    // temp = 13; da_push(&minterms, &temp, sizeof(uint8_t));
+    // // temp = 03; da_push(&minterms, &temp, sizeof(uint8_t));
+    // // temp = 14; da_push(&minterms, &temp, sizeof(uint8_t));
+    //
+    // temp = 2; da_push(&dontcares, &temp, sizeof(uint8_t));
+    // temp = 12; da_push(&dontcares, &temp, sizeof(uint8_t));
+    // temp = 15; da_push(&dontcares, &temp, sizeof(uint8_t));
 
     da_reserve(&prime_implicants, minterms.count, final_element_size);
     da_reserve(&final_implicants, minterms.count, final_element_size);
@@ -244,7 +249,7 @@ int main() {
       group = next_group;
     }
 
-    da_reserve(&final_diffs, prime_implicants.count / 2, inputbytes * sizeof(uint16_t));
+    da_reserve(&solution, prime_implicants.count, sizeof(size_t));
     da_reserve(&final_minterms, minterms.count, inputbytes);
     da_reserve(&final_implicants, prime_implicants.count, final_element_size);
 
@@ -282,7 +287,7 @@ int main() {
       uint8_t* implicant_ptr = da_get(prime_implicants, i, final_element_size);
 
       if (*(bool*) (implicant_ptr + final_element_size - sizeof(bool))) {
-        da_push(&final_diffs, implicant_ptr, inputbytes * sizeof(uint16_t));
+        da_push(&solution, &i, sizeof(size_t));
 
         size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
@@ -435,29 +440,69 @@ int main() {
         sop = new_sop;
       }
 
+      size_t min_count = SIZE_MAX;
       size_t* ptr = sop.ptr;
       for (size_t i = 0; i < sop.count; ++i) {
         size_t count = *ptr;
 
-        for (size_t j = 0; j < count; ++j) {
-          size_t id = ptr[j + 1];
-
-          printf("%zu ", id);
-        }
-        puts("");
+        if (count < min_count) min_count = count;
 
         ptr += count + 1;
       }
 
+      size_t min_cost = SIZE_MAX;
+      size_t* best_solution_ptr;
+      ptr = sop.ptr;
+      for (size_t i = 0; i < sop.count; ++i) {
+        size_t count = *ptr;
+
+        if (!(count > min_count) || compare_all_solutions) {
+          size_t sum = 0;
+          for (size_t j = 0; j < count; ++j) {
+            size_t id = ptr[j + 1];
+
+            uint8_t* implicant_ptr = da_get(final_implicants, id, final_element_size);
+            bigint_diff_t diff = bigint_diff_from_ptr(implicant_ptr, inputbytes);
+
+            sum += bigint_diff_computational_cost(diff);
+          }
+
+          if (sum < min_cost) {
+            min_cost = sum;
+            best_solution_ptr = ptr;
+          }
+        }
+
+        ptr += (count + 1);
+      }
+
+      for (size_t i = 0; i < *best_solution_ptr; ++i) {
+        size_t implicant_index = best_solution_ptr[1 + i];
+
+        size_t index = 0;
+        size_t j;
+        for (j = 0; j < prime_implicants.count; ++j) {
+          uint8_t* implicant_ptr = da_get(prime_implicants, j, final_element_size);
+          bool essential = *(bool*) (implicant_ptr + final_element_size - sizeof(bool));
+
+          if (index == implicant_index && !essential) break;
+          if (!essential) index += 1;
+        }
+
+        da_push(&solution, &j, sizeof(size_t));
+      }
+
       free(sop.ptr);
     }
+
+    print_prime_implicant_chart_solution(prime_implicants, minterms, solution, depth, inputbytes, inputncharlen, final_element_size);
 
     bigint_diff_destroy(diff_result);
     group_destroy(group);
     minterms.count = 0;
     dontcares.count = 0;
     prime_implicants.count = 0;
-    final_diffs.count = 0;
+    solution.count = 0;
     final_minterms.count = 0;
     final_implicants.count = 0;
   }
@@ -467,7 +512,7 @@ int main() {
   da_destroy(minterms);
   da_destroy(dontcares);
   da_destroy(prime_implicants);
-  da_destroy(final_diffs);
+  da_destroy(solution);
   da_destroy(final_minterms);
   da_destroy(final_implicants);
 
@@ -590,10 +635,6 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
   size_t h = prime_implicants.count * 2 - 1;
   size_t max_ids = (size_t) 1 << depth;
 
-  size_t c1 = 2 + (2 + inputncharlen) * max_ids;
-  size_t c2 = 6 + inputncharlen + (size_t) inputbytes * 8;
-  size_t c3 = 1 + w;
-
   char* buffer = malloc(w * h);
   memset(buffer, ' ', w * h);
 
@@ -693,6 +734,10 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
     }
   }
 
+  size_t c1 = 2 + (2 + inputncharlen) * max_ids;
+  size_t c2 = 6 + inputncharlen + (size_t) inputbytes * 8;
+  size_t c3 = 1 + w;
+
   putc('\n', stdout);
   for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
   putc('+', stdout);
@@ -766,6 +811,198 @@ static inline void print_prime_implicant_chart_essentials(da_header_t prime_impl
       bigint_diff_print(implicant, " ");
 
       if (essential) printf("* ");
+      else printf("  ");
+    }
+
+    printf("| ");
+    printf("%.*s", (unsigned int) w, buffer + i * w);
+    printf("|\n");
+  }
+
+  putc('+', stdout);
+  for (size_t i = 0; i < c1 - 1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+
+  free(buffer);
+}
+
+static inline void print_prime_implicant_chart_solution(da_header_t prime_implicants, da_header_t minterms, da_header_t solution, size_t depth, INPUT_SIZE_TYPE inputbytes, unsigned int inputncharlen, size_t final_element_size) {
+  if (!minterms.count || !prime_implicants.count) return;
+
+  size_t w = minterms.count * ((size_t) inputncharlen + 1);
+  size_t h = prime_implicants.count * 2 - 1;
+  size_t max_ids = (size_t) 1 << depth;
+
+  char* buffer = malloc(w * h);
+  memset(buffer, ' ', w * h);
+
+  for (size_t i = 0; i < minterms.count; ++i) {
+    bigint_t minterm = bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes);
+    size_t sum = 0;
+    size_t last_j = 0;
+
+    for (size_t j = 0; j < prime_implicants.count; ++j) {
+      uint8_t* implicant_ptr = da_get(prime_implicants, j, final_element_size);
+      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+
+      for (size_t n = 0; n < ids_count; ++n) {
+        bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+        if (bigint_equals(id, minterm)) {
+          last_j = j;
+          sum += 1;
+
+          size_t x = inputncharlen - 1 + i * (inputncharlen + 1);
+          size_t y = j * 2;
+          buffer[x + y * w] = 'x';
+
+          break;
+        }
+      }
+    }
+
+    if (sum == 1) {
+      size_t x = inputncharlen - 1 + i * (inputncharlen + 1);
+      size_t y = last_j * 2;
+      buffer[x + y * w] = '#';
+    }
+  }
+
+  for (size_t i = 0; i < prime_implicants.count; ++i) {
+    uint8_t* implicant_ptr = da_get(prime_implicants, i, final_element_size);
+
+    bool used = false;
+    for (size_t j = 0; j < solution.count; ++j) {
+      size_t implicant_index = *(size_t*) da_get(solution, j, sizeof(size_t));
+
+      if (i == implicant_index) {
+        used = true;
+        break;
+      }
+    }
+
+    if (used) {
+      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+      size_t minterm_first = 0;
+      size_t minterm_next = 0;
+
+      for (size_t j = 0; j < minterms.count; ++j) {
+        bigint_t minterm = bigint_from_ptr(da_get(minterms, j, inputbytes), inputbytes);
+
+        for (size_t n = 0; n < ids_count; ++n) {
+          bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+
+          if (bigint_equals(id, minterm)) {
+            size_t implicant_first = 0;
+            size_t implicant_next = 0;
+
+            for (size_t k = 0; k < prime_implicants.count; ++k) {
+              uint8_t* implicant_ptr = da_get(prime_implicants, k, final_element_size);
+              uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+              size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+
+              for (size_t n = 0; n < ids_count; ++n) {
+                bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+
+                if (bigint_equals(id, minterm)) {
+                  if (implicant_first) {
+                    implicant_next = k;
+                    size_t x = inputncharlen - 1 + j * (inputncharlen + 1);
+
+                    for (size_t y = implicant_first * 2 - 1; y < implicant_next * 2; ++y) {
+                      if (buffer[x + y * w] != '-') buffer[x + y * w] = '|';
+                    }
+
+                    implicant_first = k + 1;
+                  } else {
+                    implicant_first = k + 1;
+                  }
+
+                  break;
+                }
+              }
+            }
+
+            if (minterm_first) {
+              minterm_next = j;
+
+              for (size_t x = (1 + inputncharlen) * (minterm_first - 1) + inputncharlen; x < (1 + inputncharlen) * minterm_next + inputncharlen - 1; ++x) {
+                buffer[x + i * 2 * w] = '-';
+              }
+            }
+            minterm_first = j + 1;
+
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  size_t c1 = 2 + (2 + inputncharlen) * max_ids;
+  size_t c2 = 4 + (size_t) inputbytes * 8;
+  size_t c3 = 1 + w;
+
+  putc('\n', stdout);
+  for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+  for (size_t i = 0; i < c1 + c2 + 1; ++i) putc(' ', stdout);
+  printf("| ");
+  for (size_t i = 0; i < minterms.count; ++i) printf("%*" PRIuPTR " ", inputncharlen, bigint_into_ptrdiff(bigint_from_ptr(da_get(minterms, i, inputbytes), inputbytes)));
+  printf("|\n");
+  putc('+', stdout);
+  for (size_t i = 0; i < c1 - 1; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c2; ++i) putc('-', stdout);
+  putc('+', stdout);
+  for (size_t i = 0; i < c3; ++i) putc('-', stdout);
+  printf("+\n");
+
+  for (size_t i = 0; i < h; ++i) {
+    printf("| ");
+    if (i & 1) {
+      for (size_t j = 0; j < c1 - 2; ++j) putc(' ', stdout);
+      putc('|', stdout);
+      for (size_t j = 0; j < c2; ++j) putc(' ', stdout);
+    } else {
+      uint8_t* implicant_ptr = da_get(prime_implicants, i / 2, final_element_size);
+      uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
+      bigint_diff_t implicant = bigint_diff_from_ptr(implicant_ptr, inputbytes);
+
+      bool used = false;
+      for (size_t j = 0; j < solution.count; ++j) {
+        size_t implicant_index = *(size_t*) da_get(solution, j, sizeof(size_t));
+
+        if (i / 2 == implicant_index) {
+          used = true;
+          break;
+        }
+      }
+
+      size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
+      size_t skipped = max_ids - ids_count;
+
+      for (size_t n = 0; n < skipped; ++n) {
+        for (unsigned int j = 0; j < inputncharlen; ++j) putc(' ', stdout);
+        printf("  ");
+      }
+      for (size_t n = 0; n < max_ids - skipped; ++n) {
+        bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+        printf("%*" PRIuPTR ", ", inputncharlen, bigint_into_ptrdiff(id));
+      }
+
+      printf("| ");
+      bigint_diff_print(implicant, " ");
+
+      if (used) printf("* ");
       else printf("  ");
     }
 

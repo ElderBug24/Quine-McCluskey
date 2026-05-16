@@ -84,6 +84,8 @@ void bigint_diff_format(const bigint_diff_t, char* restrict);
 void bigint_diff_print(const bigint_diff_t, const char* restrict);
 
 bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
+uint8_t diff_computational_cost(const uint16_t);
+size_t bigint_diff_computational_cost(const bigint_diff_t);
 
 #endif // BIGINT_H
 
@@ -487,6 +489,27 @@ bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t b) {
   }
 
   return true;
+}
+
+uint8_t diff_computational_cost(const uint16_t diff) {
+  return (uint8_t) (!(diff & 0b1000000000000000)
+                  + !(diff & 0b0010000000000000)
+                  + !(diff & 0b0000100000000000)
+                  + !(diff & 0b0000001000000000)
+                  + !(diff & 0b0000000010000000)
+                  + !(diff & 0b0000000000100000)
+                  + !(diff & 0b0000000000001000)
+                  + !(diff & 0b0000000000000010));
+}
+
+size_t bigint_diff_computational_cost(const bigint_diff_t diff) {
+  size_t sum = 0;
+
+  for (size_t i = 0; i < diff.count; ++i) {
+    sum += diff_computational_cost(diff.ptr[i]);
+  }
+
+  return sum;
 }
 
 #endif // BIGINT_IMPLEMENTATION

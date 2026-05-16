@@ -91,6 +91,8 @@ int main() {
   // uint16_t diff2 = 0b0001100100101001;
   //
   // diff_print(diff, "\n");
+  // uint8_t cc = diff_computational_cost(diff);
+  // printf("%u\n", cc);
   //
   // diff_result = diff_diff(diff, diff2);
   //
@@ -98,24 +100,28 @@ int main() {
   // print_byte_bits_uint16(diff_result.diff, "\n");
   // printf("%u\n", diff_result.count);
   // diff_print(diff_result.diff, "\n");
+  // cc = diff_computational_cost(diff_result.diff);
+  // printf("%u\n", cc);
 
-  // bigint_t a = bigint_new(8);
-  // bigint_t b = bigint_new(8);
-  //
-  // uint64_t temp = 0b0000000001101011010010010011100001100001101011011011110010011101; // 30198329013812381
-  // bigint_set(&a, (uint8_t*) &temp, 8);
-  // temp =          0b0000000001101011010010010011100001100001111010000011100010011111;
-  // bigint_set(&b, (uint8_t*) &temp, 8);
-  //
+  bigint_t a = bigint_new(8);
+  bigint_t b = bigint_new(8);
+
+  uint64_t temp = 0b0000000001101011010010010011100001100001101011011011110010011101; // 30198329013812381
+  bigint_set(&a, (uint8_t*) &temp, 8);
+  temp =          0b0000000001101011010010010011100001100001111010000011100010011111;
+  bigint_set(&b, (uint8_t*) &temp, 8);
+
   // puts("0000000001101011010010010011100001100001101011011011110010011101");
-  // bigint_print_binary(a, "\n");
-  // bigint_print_binary(b, "\n");
-  //
-  // bigint_diff_result_t result = bigint_diff(a, b);
-  // bigint_diff_print(result.diff, "\n");
-  // // bigint_diff_print_binary(result.diff, "\n");
-  // printf("%u\n", result.count);
-  //
+  bigint_print_binary(a, "\n");
+  bigint_print_binary(b, "\n");
+
+  bigint_diff_t result = bigint_diff_from_ptr(malloc(16), 8);
+  size_t count = bigint_diff_into(a, b, result);
+  bigint_diff_print(result, "\n");
+  // bigint_diff_print_binary(result.diff, "\n");
+  printf("%zu\n", count);
+  printf("%zu\n", bigint_diff_computational_cost(result));
+
   // bigint_diff_t diff2 = {
   //   .ptr = malloc(8),
   //   .count = 8
@@ -128,12 +134,12 @@ int main() {
   // bigint_diff_result_t result2 = bigint_diff_diff(result.diff, diff2);
   // bigint_diff_print(result2.diff, "\n");
   // printf("%u\n", result2.count);
-  //
-  // bigint_destroy(a);
-  // bigint_destroy(b);
+
+  bigint_destroy(a);
+  bigint_destroy(b);
   // bigint_diff_destroy(result.diff);
   // bigint_diff_destroy(diff2);
-  //
+
   // uint16_t aaa = 0b1111111100000000;
   // print_bits((void*) &aaa, 2, "\n");
 
@@ -146,14 +152,15 @@ int main() {
   // uint64_t temp = 0b0000000001101011010010010011100001100001101011011011110010011101; // 30198329013812381
   // bigint_set(&a, (uint8_t*) &temp, 8);
   // bigint_print_binary(a, "\n");
-  // bigint_diff_t diff = bigint_into_diff(a);
+  // bigint_diff_t diff = bigint_diff_from_ptr(malloc(16), 8);
+  // bigint_into_diff(a, diff);
   // bigint_diff_print(diff, "\n");
-
+  //
   // bigint_t a = bigint_new(8);
   // for (size_t i = 0; i < 123456789; ++i) {
   //   bigint_inc(a);
   // }
-  //
+
   // bigint_print_decimal(a);
   //
   // bigint_destroy(a);
@@ -212,27 +219,28 @@ int main() {
   //   }
   //   puts("");
   // }
-  typedef struct product_t {
-    size_t count;
-    uint8_t terms[];
-  } product_t;
 
-  uint8_t* buffer = calloc(100, 1);
-
-  *(size_t*) buffer = 3;
-  buffer[8] = 69;
-  buffer[9] = 34;
-  buffer[10] = 111;
-
-  product_t* product = (product_t*) buffer;
-
-  printf("%zu\n", product->count);
-  printf("%u\n", product->terms[0]);
-  printf("%u\n", product->terms[1]);
-  printf("%u\n", product->terms[2]);
-  printf("%u\n", product->terms[3]);
-
-  free(buffer);
+  // typedef struct product_t {
+  //   size_t count;
+  //   uint8_t terms[];
+  // } product_t;
+  //
+  // uint8_t* buffer = calloc(100, 1);
+  //
+  // *(size_t*) buffer = 3;
+  // buffer[8] = 69;
+  // buffer[9] = 34;
+  // buffer[10] = 111;
+  //
+  // product_t* product = (product_t*) buffer;
+  //
+  // printf("%zu\n", product->count);
+  // printf("%u\n", product->terms[0]);
+  // printf("%u\n", product->terms[1]);
+  // printf("%u\n", product->terms[2]);
+  // printf("%u\n", product->terms[3]);
+  //
+  // free(buffer);
 
   puts("\nexiting without errors");
   return 0;
