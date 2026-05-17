@@ -42,8 +42,9 @@ int main() {
   constexpr const INPUT_SIZE_TYPE  outputbits = 4;
   constexpr const unsigned int inputcharlen  = 2; // inputbits < 10 ^ inputcharlen - 1
   constexpr const unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen - 1
-  [[maybe_unused]] constexpr const bool compare_all_solutions = false; // will compare all solutions even those with more implicants, going against Petrick's method but seems more suitable for computational cost comparison
-  [[maybe_unused]] constexpr const bool print_steps = true;
+  [[maybe_unused]] constexpr const bool compare_all_solutions = false; // will compare all solutions even those with more implicants, going against Petrick's method but seems suitable for computational cost comparison
+  [[maybe_unused]] constexpr const bool compare_boolnot_cost = false; // will compare boolean not operation cost to break a tie between different solutions, going against Petrick's method but seems suitable for computational cost comparison
+  [[maybe_unused]] constexpr const bool print_steps = true; // will print nicely formatted information about the steps, including the prime implicant chart
 
   constexpr const INPUT_SIZE_TYPE  inputbytes = ( inputbits + 7) / 8;
   constexpr const INPUT_SIZE_TYPE outputbytes = (outputbits + 7) / 8;
@@ -472,24 +473,28 @@ int main() {
       }
 
       size_t min_cost = SIZE_MAX;
+      size_t min_boolnot_cost = SIZE_MAX;
       size_t* best_solution_ptr = NULL;
       ptr = sop.ptr;
       for (size_t i = 0; i < sop.count; ++i) {
         size_t count = *ptr;
 
         if (!(count > min_count) || compare_all_solutions) {
-          size_t sum = 0;
+          size_t cost = 0;
+          size_t boolnot_cost = 0;
           for (size_t j = 0; j < count; ++j) {
             size_t id = ptr[j + 1];
 
             uint8_t* implicant_ptr = da_get(final_implicants, id, final_element_size);
             bigint_diff_t diff = bigint_diff_from_ptr(implicant_ptr, inputbytes);
 
-            sum += bigint_diff_computational_cost(diff);
+            cost += bigint_diff_computational_cost(diff);
+            boolnot_cost += bigint_diff_count_zeros(diff);
           }
 
-          if (sum < min_cost) {
-            min_cost = sum;
+          if (cost < min_cost || (compare_boolnot_cost && cost == min_cost && boolnot_cost < min_boolnot_cost)) {
+            min_cost = cost;
+            min_boolnot_cost = boolnot_cost;
             best_solution_ptr = ptr;
           }
         }
