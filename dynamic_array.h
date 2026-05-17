@@ -14,21 +14,21 @@ typedef struct da_header_t {
   void* ptr;
 } da_header_t;
 
-da_header_t da_with_capacity(size_t, size_t);
-void da_destroy(da_header_t);
+static inline da_header_t da_with_capacity(size_t, size_t);
+static inline void da_destroy(da_header_t);
 
-void da_reserve_exact(da_header_t*, size_t, size_t);
-void da_reserve(da_header_t*, size_t, size_t);
-void da_reserve_exact_reset(da_header_t*, size_t, size_t);
-void da_reserve_reset(da_header_t*, size_t, size_t);
+static inline void da_reserve_exact(da_header_t*, size_t, size_t);
+static inline void da_reserve(da_header_t*, size_t, size_t);
+static inline void da_reserve_exact_reset(da_header_t*, size_t, size_t);
+static inline void da_reserve_reset(da_header_t*, size_t, size_t);
 
-void da_push(da_header_t* restrict, void* restrict, size_t);
-void da_push_many(da_header_t* restrict, void* restrict, size_t, size_t);
-void* da_get(da_header_t, size_t, size_t);
-void da_swap_remove(da_header_t*, size_t, size_t);
+static inline void da_push(da_header_t* restrict, void* restrict, size_t);
+static inline void da_push_many(da_header_t* restrict, void* restrict, size_t, size_t);
+static inline void* da_get(da_header_t, size_t, size_t);
+static inline void da_swap_remove(da_header_t*, size_t, size_t);
 
-da_header_t group_new(INPUT_SIZE_TYPE, size_t);
-void group_destroy(da_header_t);
+static inline da_header_t group_new(INPUT_SIZE_TYPE, size_t);
+static inline void group_destroy(da_header_t);
 
 static inline size_t binomial_coefficient(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE);
 
@@ -36,7 +36,7 @@ static inline size_t binomial_coefficient(INPUT_SIZE_TYPE, INPUT_SIZE_TYPE);
 
 #ifdef DYNAMICARRAY_IMPLEMENTATION
 
-da_header_t da_with_capacity(size_t capacity, size_t size) {
+static inline da_header_t da_with_capacity(size_t capacity, size_t size) {
   void* ptr = malloc(sizeof(da_header_t) + size * capacity);
   if (!ptr) exit_error(2);
 
@@ -49,11 +49,11 @@ da_header_t da_with_capacity(size_t capacity, size_t size) {
   return header;
 }
 
-void da_destroy(da_header_t arr) {
+static inline void da_destroy(da_header_t arr) {
   free(arr.ptr);
 }
 
-void da_reserve_exact(da_header_t* arr, size_t capacity, size_t size) {
+static inline void da_reserve_exact(da_header_t* arr, size_t capacity, size_t size) {
   if (arr->capacity < capacity) {
     arr->ptr = realloc(arr->ptr, size * capacity);
     if (!arr->ptr) exit_error(2);
@@ -61,15 +61,15 @@ void da_reserve_exact(da_header_t* arr, size_t capacity, size_t size) {
   arr->capacity = capacity;
 }
 
-void da_reserve(da_header_t* arr, size_t capacity, size_t size) {
-  size_t new_capacity = arr->capacity;// ? arr->capacity : 4;
+static inline void da_reserve(da_header_t* arr, size_t capacity, size_t size) {
+  size_t new_capacity = arr->capacity; // ? arr->capacity : 4;
 
   while (new_capacity < capacity) new_capacity *= 2;
 
   da_reserve_exact(arr, new_capacity, size);
 }
 
-void da_reserve_exact_reset(da_header_t* arr, size_t capacity, size_t size) {
+static inline void da_reserve_exact_reset(da_header_t* arr, size_t capacity, size_t size) {
   if (arr->capacity < capacity) {
     arr->ptr = malloc(size * capacity);
     if (!arr->ptr) exit_error(2);
@@ -77,7 +77,7 @@ void da_reserve_exact_reset(da_header_t* arr, size_t capacity, size_t size) {
   arr->capacity = capacity;
 }
 
-void da_reserve_reset(da_header_t* arr, size_t capacity, size_t size) {
+static inline void da_reserve_reset(da_header_t* arr, size_t capacity, size_t size) {
   size_t new_capacity = arr->capacity;
 
   while (new_capacity < capacity) new_capacity *= 2;
@@ -85,34 +85,34 @@ void da_reserve_reset(da_header_t* arr, size_t capacity, size_t size) {
   da_reserve_exact_reset(arr, new_capacity, size);
 }
 
-void da_push(da_header_t* restrict arr, void* restrict element, size_t size) {
+static inline void da_push(da_header_t* restrict arr, void* restrict element, size_t size) {
   da_reserve(arr, arr->count + 1, size);
 
   memcpy((uint8_t*) arr->ptr + arr->count * size, element, size);
   arr->count += 1;
 }
 
-void da_push_many(da_header_t* restrict arr, void* restrict elements, size_t count, size_t size) {
+static inline void da_push_many(da_header_t* restrict arr, void* restrict elements, size_t count, size_t size) {
   da_reserve(arr, arr->count + count, size);
 
   memcpy((uint8_t*) arr->ptr + arr->count * size, elements, count * size);
   arr->count += count;
 }
 
-void* da_get(da_header_t arr, size_t index, size_t size) {
+static inline void* da_get(da_header_t arr, size_t index, size_t size) {
   assert(index < arr.capacity);
 
   return (void*) ((uint8_t*) arr.ptr + index * size);
 }
 
-void da_swap_remove(da_header_t* arr, size_t index, size_t size) {
+static inline void da_swap_remove(da_header_t* arr, size_t index, size_t size) {
   assert(index < arr->capacity);
 
   memcpy(da_get(*arr, index, size), da_get(*arr, arr->count - 1, size), size);
   arr->count -= 1;
 }
 
-da_header_t group_new(INPUT_SIZE_TYPE max_bits, size_t size) {
+static inline da_header_t group_new(INPUT_SIZE_TYPE max_bits, size_t size) {
   da_header_t group = da_with_capacity(max_bits + 1, sizeof(da_header_t));
 
   for (INPUT_SIZE_TYPE i = 0; i < max_bits + 1; ++i) {
@@ -126,7 +126,7 @@ da_header_t group_new(INPUT_SIZE_TYPE max_bits, size_t size) {
   return group;
 }
 
-void group_destroy(da_header_t group) {
+static inline void group_destroy(da_header_t group) {
   for (size_t i = 0; i < group.count; ++i) {
     da_destroy(((da_header_t*) group.ptr)[i]);
   }

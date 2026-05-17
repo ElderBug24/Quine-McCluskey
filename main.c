@@ -41,8 +41,8 @@ static inline void print_bigint_group(da_header_t, size_t, INPUT_SIZE_TYPE, INPU
 int main() {
   constexpr const INPUT_SIZE_TYPE   inputbits = 4;
   constexpr const INPUT_SIZE_TYPE  outputbits = 4;
-  constexpr const unsigned int inputcharlen  = 2; // inputbits < 10 ^ inputcharlen - 1
-  constexpr const unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen - 1
+  constexpr const unsigned int inputcharlen  = 1; // inputbits < 10 ^ inputcharlen
+  constexpr const unsigned int inputncharlen = 2; // 2 ^ inputbits < 10 ^ inputncharlen
   [[maybe_unused]] constexpr const bool compare_all_solutions = false; // will compare all solutions even those with more implicants, going against Petrick's method but seems suitable for computational cost comparison
   [[maybe_unused]] constexpr const bool compare_boolnot_cost = false; // will compare boolean not operation cost to break a tie between different solutions, going against Petrick's method but seems suitable for computational cost comparison
   [[maybe_unused]] constexpr const bool print_steps = true; // will print nicely formatted information about the steps, including the prime implicant chart
@@ -528,7 +528,7 @@ int main() {
     da_push_many(&output_str, buffer, strlen(buffer), sizeof(char));
 
     for (size_t i = 0; i < solution.count; ++i) {
-      char* str = "\n    || ";
+      char* str = "\n    | ";
       da_push_many(&output_str, str, strlen(str), sizeof(char));
 
       str = "( true";
@@ -543,7 +543,7 @@ int main() {
         uint16_t diff_bit = *(diff.ptr + j / 16) >> ((j % 16) * 2) & 3;
 
         if (!(diff_bit & 2)) {
-          str = " && ";
+          str = " & ";
           da_push_many(&output_str, str, strlen(str), sizeof(char));
 
           if (!diff_bit) {
@@ -587,11 +587,17 @@ int main() {
   da_push(&output_str, str, sizeof(char));
   for (INPUT_SIZE_TYPE i = 0; i < outputbits; ++i) {
     if (!(i % 8)) {
-      snprintf(buffer, sizeof(buffer), "  *(output + %u) = 0;\n", i / 8);
+      snprintf(buffer, sizeof(buffer), "  *(output + %u) = 0\n", i / 8);
       da_push_many(&output_str, buffer, strlen(buffer), sizeof(char));
     }
-    snprintf(buffer, sizeof(buffer), "  *(output + %u) |= ((uint8_t) out_%x) << %u;\n", i / 8, i, i % 8);
+    snprintf(buffer, sizeof(buffer), "    | (((uint8_t) out_%x) << %u)", i, i % 8);
     da_push_many(&output_str, buffer, strlen(buffer), sizeof(char));
+    if ((i % 8) == 7 || i == outputbits - 1) {
+      str = ";\n";
+    } else {
+      str = "\n";
+    }
+    da_push_many(&output_str, str, strlen(str), sizeof(char));
   }
   str = "}";
   da_push_many(&output_str, str, strlen(str) + 1, sizeof(char));

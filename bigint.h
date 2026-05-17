@@ -10,18 +10,8 @@
 
 inline void exit_error(int);
 
-typedef struct uint8_s {
-  uint8_t a : 1;
-  uint8_t b : 1;
-  uint8_t c : 1;
-  uint8_t d : 1;
-  uint8_t e : 1;
-  uint8_t f : 1;
-  uint8_t g : 1;
-  uint8_t h : 1;
-} uint8_s;
+static inline uint8_t uint8_binary_weight(const uint8_t);
 
-uint8_t uint8_binary_weight(const uint8_t);
 void uint8_format_bits(const uint8_t, char* restrict);
 void print_byte_bits(const uint8_t, const char* restrict);
 void print_byte_bits_uint16(const uint16_t, const char* restrict);
@@ -33,22 +23,22 @@ typedef struct bigint_t {
   INPUT_SIZE_TYPE count;
 } bigint_t;
 
-bigint_t bigint_new(const INPUT_SIZE_TYPE);
-bigint_t bigint_from_ptr(void* restrict, INPUT_SIZE_TYPE);
-void bigint_destroy(bigint_t);
-void bigint_set(bigint_t* restrict, const uint8_t* restrict, const INPUT_SIZE_TYPE);
-void bigint_copy_into(const bigint_t, bigint_t);
+static inline bigint_t bigint_new(const INPUT_SIZE_TYPE);
+static inline bigint_t bigint_from_ptr(void* restrict, INPUT_SIZE_TYPE);
+static inline void bigint_destroy(bigint_t);
+static inline void bigint_set(bigint_t* restrict, const uint8_t* restrict, const INPUT_SIZE_TYPE);
+static inline void bigint_copy_into(const bigint_t, bigint_t);
 
-INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t);
-uint8_t bigint_inc(bigint_t);
-uint8_t bigint_inc_into(const bigint_t, bigint_t);
-uintptr_t bigint_into_ptrdiff(const bigint_t);
-bool bigint_get_bit(const bigint_t, INPUT_SIZE_TYPE);
+static inline INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t);
+static inline uint8_t bigint_inc(bigint_t);
+static inline uint8_t bigint_inc_into(const bigint_t, bigint_t);
+static inline uintptr_t bigint_into_ptrdiff(const bigint_t);
+static inline bool bigint_get_bit(const bigint_t, INPUT_SIZE_TYPE);
+
+static inline bool bigint_equals(const bigint_t, const bigint_t);
+static inline bool bigint_equals_zero(const bigint_t);
 
 void bigint_print_binary(const bigint_t, const char*);
-
-bool bigint_equals(const bigint_t, const bigint_t);
-bool bigint_equals_zero(const bigint_t);
 
 typedef struct byte_diff_result_t {
   uint16_t diff;
@@ -60,17 +50,23 @@ typedef struct bigint_diff_t {
   INPUT_SIZE_TYPE count;
 } bigint_diff_t;
 
-bigint_diff_t bigint_diff_from_ptr(void* restrict, INPUT_SIZE_TYPE);
-void bigint_diff_destroy(bigint_diff_t);
+static inline bigint_diff_t bigint_diff_from_ptr(void* restrict, INPUT_SIZE_TYPE);
+static inline void bigint_diff_destroy(bigint_diff_t);
 
-byte_diff_result_t diff_byte(const uint8_t, const uint8_t);
-byte_diff_result_t diff_diff(const uint16_t, const uint16_t);
+static inline byte_diff_result_t diff_byte(const uint8_t, const uint8_t);
+static inline byte_diff_result_t diff_diff(const uint16_t, const uint16_t);
 
-INPUT_SIZE_TYPE bigint_diff_into(const bigint_t, const bigint_t, bigint_diff_t);
-INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t, const bigint_diff_t, bigint_diff_t);
+static inline INPUT_SIZE_TYPE bigint_diff_into(const bigint_t, const bigint_t, bigint_diff_t);
+static inline INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t, const bigint_diff_t, bigint_diff_t);
 
-uint16_t byte_into_diff(const uint8_t);
-void bigint_into_diff(const bigint_t, bigint_diff_t);
+static inline uint16_t byte_into_diff(const uint8_t);
+static inline void bigint_into_diff(const bigint_t, bigint_diff_t);
+
+static inline bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
+static inline uint8_t diff_computational_cost(const uint16_t);
+static inline uint8_t diff_count_zeros(const uint16_t);
+static inline size_t bigint_diff_computational_cost(const bigint_diff_t);
+static inline size_t bigint_diff_count_zeros(const bigint_diff_t);
 
 void diff_format(const uint16_t, char* restrict);
 void diff_print(const uint16_t, const char* restrict);
@@ -78,27 +74,15 @@ void bigint_diff_print_binary(const bigint_diff_t, const char* restrict);
 void bigint_diff_format(const bigint_diff_t, char* restrict);
 void bigint_diff_print(const bigint_diff_t, const char* restrict);
 
-bool bigint_diff_equals(const bigint_diff_t, const bigint_diff_t);
-uint8_t diff_computational_cost(const uint16_t);
-uint8_t diff_count_zeros(const uint16_t);
-size_t bigint_diff_computational_cost(const bigint_diff_t);
-size_t bigint_diff_count_zeros(const bigint_diff_t);
-
 #endif // BIGINT_H
 
 #ifdef BIGINT_IMPLEMENTATION
 
-uint8_t uint8_binary_weight(const uint8_t byte) {
-  uint8_s bits = *(uint8_s*) &byte;
+static inline uint8_t uint8_binary_weight(uint8_t byte) {
+    byte = (uint8_t)(byte - ((byte >> 1u) & 0x55u));
+    byte = (uint8_t)((byte & 0x33u) + ((byte >> 2u) & 0x33u));
 
-  return(uint8_t) (bits.a
-                 + bits.b
-                 + bits.c
-                 + bits.d
-                 + bits.e
-                 + bits.f
-                 + bits.g
-                 + bits.h);
+    return (uint8_t)((byte + (byte >> 4u)) & 0x0Fu);
 }
 
 void format_byte_bits(const uint8_t num, char* restrict output) {
@@ -144,7 +128,7 @@ void print_bits(const void* restrict num, const size_t count, const char* restri
   free(str);
 }
 
-bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
+static inline bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
   void* ptr = calloc(size, 1);
   if (!ptr) exit_error(2);
   return (bigint_t) {
@@ -153,18 +137,18 @@ bigint_t bigint_new(const INPUT_SIZE_TYPE size) {
   };
 }
 
-bigint_t bigint_from_ptr(void* restrict allocation, const INPUT_SIZE_TYPE size) {
+static inline bigint_t bigint_from_ptr(void* restrict allocation, const INPUT_SIZE_TYPE size) {
   return (bigint_t) {
     .ptr = allocation,
     .count = size
   };
 }
 
-void bigint_destroy(bigint_t num) {
+static inline void bigint_destroy(bigint_t num) {
   free(num.ptr);
 }
 
-void bigint_set(bigint_t* restrict num, const uint8_t* restrict ptr, const INPUT_SIZE_TYPE count) {
+static inline void bigint_set(bigint_t* restrict num, const uint8_t* restrict ptr, const INPUT_SIZE_TYPE count) {
   assert(count <= num->count);
 
   for (size_t i = 0; i < count; ++i) {
@@ -172,17 +156,17 @@ void bigint_set(bigint_t* restrict num, const uint8_t* restrict ptr, const INPUT
   }
 }
 
-void bigint_set_zero(bigint_t num) {
+static inline void bigint_set_zero(bigint_t num) {
   memset((void*) num.ptr, 0, num.count);
 }
 
-void bigint_copy_into(const bigint_t num, bigint_t other) {
+static inline void bigint_copy_into(const bigint_t num, bigint_t other) {
   assert(num.count <= other.count);
 
   memcpy((void*) other.ptr, (void*) num.ptr, num.count);
 }
 
-INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t num) {
+static inline INPUT_SIZE_TYPE bigint_binary_weight(const bigint_t num) {
   INPUT_SIZE_TYPE sum = 0;
 
   for (size_t i = 0; i < num.count; ++i) {
@@ -244,7 +228,7 @@ void bigint_diff_print(const bigint_diff_t diff, const char* restrict end) {
   free(str);
 }
 
-uint8_t bigint_inc(bigint_t num) {
+static inline uint8_t bigint_inc(bigint_t num) {
   uint8_t carry = 1;
   uint8_t* ptr = num.ptr;
 
@@ -257,7 +241,7 @@ uint8_t bigint_inc(bigint_t num) {
   // return (*(size_t*) num.ptr)++ == 0;
 }
 
-uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
+static inline uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
   uint8_t carry = 1;
   uint8_t* ptra = num.ptr;
   uint8_t* ptrb = other.ptr;
@@ -269,7 +253,7 @@ uint8_t bigint_inc_into(const bigint_t num, bigint_t other) {
   return carry;
 }
 
-uintptr_t bigint_into_ptrdiff(const bigint_t num) {
+static inline uintptr_t bigint_into_ptrdiff(const bigint_t num) {
   assert(num.count <= sizeof(uintptr_t));
   uintptr_t ptr = 0;
 
@@ -280,14 +264,14 @@ uintptr_t bigint_into_ptrdiff(const bigint_t num) {
   return ptr;
 }
 
-bool bigint_get_bit(const bigint_t num, INPUT_SIZE_TYPE bit) {
+static inline bool bigint_get_bit(const bigint_t num, INPUT_SIZE_TYPE bit) {
   div_t r = div(bit, 8);
   uint8_t byte = num.ptr[r.quot];
 
   return byte & (1 << r.rem);
 }
 
-bool bigint_equals(const bigint_t a, const bigint_t b) {
+static inline bool bigint_equals(const bigint_t a, const bigint_t b) {
   assert(a.count == b.count);
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -297,7 +281,7 @@ bool bigint_equals(const bigint_t a, const bigint_t b) {
   return true;
 }
 
-bool bigint_equals_zero(const bigint_t num) {
+static inline bool bigint_equals_zero(const bigint_t num) {
   for (size_t i = 0; i < num.count; ++i) {
     if (num.ptr[i] != 0) return false;
   }
@@ -307,7 +291,7 @@ bool bigint_equals_zero(const bigint_t num) {
 
 // for each bit: same -> same, different -> 10
 // and counts the amount of different bits
-byte_diff_result_t diff_byte(const uint8_t a, const uint8_t b) {
+static inline byte_diff_result_t diff_byte(const uint8_t a, const uint8_t b) {
   uint8_t xor = a ^ b;
 
   uint16_t diff = 0;
@@ -347,7 +331,7 @@ byte_diff_result_t diff_byte(const uint8_t a, const uint8_t b) {
 
 // for each 2bits: same -> same, different -> 10
 // and counts the amount of different 2bits
-byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
+static inline byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
   uint16_t xor = a ^ b;
 
   uint16_t diff = 0;
@@ -385,18 +369,18 @@ byte_diff_result_t diff_diff(const uint16_t a, const uint16_t b) {
   };
 }
 
-bigint_diff_t bigint_diff_from_ptr(void* restrict allocation, INPUT_SIZE_TYPE size) {
+static inline bigint_diff_t bigint_diff_from_ptr(void* restrict allocation, INPUT_SIZE_TYPE size) {
   return (bigint_diff_t) {
     .ptr = allocation,
     .count = size
   };
 }
 
-void bigint_diff_destroy(bigint_diff_t diff) {
+static inline void bigint_diff_destroy(bigint_diff_t diff) {
   free(diff.ptr);
 }
 
-INPUT_SIZE_TYPE bigint_diff_into(const bigint_t a, const bigint_t b, bigint_diff_t diff) {
+static inline INPUT_SIZE_TYPE bigint_diff_into(const bigint_t a, const bigint_t b, bigint_diff_t diff) {
   assert(a.count == b.count);
   assert(a.count == diff.count);
 
@@ -411,7 +395,7 @@ INPUT_SIZE_TYPE bigint_diff_into(const bigint_t a, const bigint_t b, bigint_diff
   return count;
 }
 
-INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const bigint_diff_t b, bigint_diff_t diff) {
+static inline INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const bigint_diff_t b, bigint_diff_t diff) {
   assert(a.count == b.count);
   assert(a.count == diff.count);
 
@@ -426,7 +410,7 @@ INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const bigint_diff_t
   return count;
 }
 
-uint16_t byte_into_diff(const uint8_t num) {
+static inline uint16_t byte_into_diff(const uint8_t num) {
   return (num & 0b10000000) << 7
        | (num & 0b01000000) << 6
        | (num & 0b00100000) << 5
@@ -437,7 +421,7 @@ uint16_t byte_into_diff(const uint8_t num) {
        | (num & 0b00000001) << 0;
 }
 
-void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
+static inline void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
   assert(num.count == diff.count);
 
   for (size_t i = 0; i < num.count; ++i) {
@@ -445,7 +429,7 @@ void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
   }
 }
 
-bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t b) {
+static inline bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t b) {
   assert(a.count == b.count);
 
   for (size_t i = 0; i < a.count; ++i) {
@@ -455,7 +439,7 @@ bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t b) {
   return true;
 }
 
-uint8_t diff_computational_cost(const uint16_t diff) {
+static inline uint8_t diff_computational_cost(const uint16_t diff) {
   return (uint8_t) (!(diff & 0b1000000000000000)
                   + !(diff & 0b0010000000000000)
                   + !(diff & 0b0000100000000000)
@@ -466,7 +450,7 @@ uint8_t diff_computational_cost(const uint16_t diff) {
                   + !(diff & 0b0000000000000010));
 }
 
-uint8_t diff_count_zeros(const uint16_t diff) {
+static inline uint8_t diff_count_zeros(const uint16_t diff) {
   return (uint8_t) (((diff & 0b1100000000000000) == 0)
                   + ((diff & 0b0011000000000000) == 0)
                   + ((diff & 0b0000110000000000) == 0)
@@ -477,7 +461,7 @@ uint8_t diff_count_zeros(const uint16_t diff) {
                   + ((diff & 0b0000000000000011) == 0));
 }
 
-size_t bigint_diff_computational_cost(const bigint_diff_t diff) {
+static inline size_t bigint_diff_computational_cost(const bigint_diff_t diff) {
   size_t sum = 0;
 
   for (size_t i = 0; i < diff.count; ++i) {
@@ -487,7 +471,7 @@ size_t bigint_diff_computational_cost(const bigint_diff_t diff) {
   return sum;
 }
 
-size_t bigint_diff_count_zeros(const bigint_diff_t diff) {
+static inline size_t bigint_diff_count_zeros(const bigint_diff_t diff) {
   size_t sum = 0;
 
   for (size_t i = 0; i < diff.count; ++i) {
