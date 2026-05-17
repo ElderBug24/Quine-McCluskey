@@ -55,7 +55,6 @@ void da_destroy(da_header_t arr) {
 
 void da_reserve_exact(da_header_t* arr, size_t capacity, size_t size) {
   if (arr->capacity < capacity) {
-    puts("\n\nREALOC!!!\n\n");
     arr->ptr = realloc(arr->ptr, size * capacity);
     if (!arr->ptr) exit_error(2);
   }
@@ -72,7 +71,6 @@ void da_reserve(da_header_t* arr, size_t capacity, size_t size) {
 
 void da_reserve_exact_reset(da_header_t* arr, size_t capacity, size_t size) {
   if (arr->capacity < capacity) {
-    puts("\n\nREALOC!!!\n\n");
     arr->ptr = malloc(size * capacity);
     if (!arr->ptr) exit_error(2);
   }
