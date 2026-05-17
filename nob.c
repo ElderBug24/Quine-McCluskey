@@ -16,7 +16,7 @@ int main(int argc, char** argv) {
     if (!nob_cmd_run(&cmd)) return 1;
   } else {
     if (!nob_mkdir_if_not_exists("build")) return 1;
-    nob_cmd_append(&cmd, "gcc", "-Wall", "-Wextra", "-Wconversion", "-pedantic", "-ggdb", "-O3", "-o", "build/main", "main.c");
+    nob_cmd_append(&cmd, "gcc", "-std=c23", "-Wall", "-Wextra", "-Wconversion", "-pedantic", "-ggdb", "-O3", "-o", "build/main", "main.c", "-lm");
     if (!nob_cmd_run(&cmd)) return 1;
     nob_cmd_append(&cmd, "build/main");
     if (!nob_cmd_run(&cmd)) return 1;

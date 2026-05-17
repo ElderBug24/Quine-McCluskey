@@ -1,5 +1,7 @@
 build/
 nob.exe
 nob.exe.old
+nob
+nob.old
 test.c
 

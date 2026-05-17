@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <stdbool.h>
 #include <assert.h>
 
 typedef uint8_t INPUT_SIZE_TYPE; // this type must be able to hold up to inputbits + 1
@@ -21,8 +22,8 @@ typedef struct sop_t {
 
 #include <math.h>
 void input_function(uint8_t* input, uint8_t* output) {
-  constexpr double PI = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651;
-  float x = *input;
+  constexpr const double PI = 3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651;
+  double x = *input;
   *output = (uint8_t) (16.0 * 1.0 / (1.0 + exp(-(sin(x) + sin(sqrt(2.0) * x) + sin(PI * x) + sin(x * x)))));
 }
 
