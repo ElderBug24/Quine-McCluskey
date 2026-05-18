@@ -160,10 +160,7 @@ int main() {
           uint8_t* num2_ptr = da_get(*next_bucket, k, element_size);
           bigint_t num2 = bigint_from_ptr(num2_ptr, inputbytes);
 
-          INPUT_SIZE_TYPE count = bigint_diff_into(num, num2, diff_result);
-          assert(count);
-
-          if (count == 1) {
+          if (bigint_diff_into_smart(num, num2, diff_result)) {
             *(num_ptr + element_size - sizeof(bool)) = true;
             *(num2_ptr + element_size - sizeof(bool)) = true;
             pushed += 1;
@@ -227,10 +224,7 @@ int main() {
             uint8_t* diff2_ptr = da_get(*next_bucket, k, element_size);
             bigint_diff_t diff2 = bigint_diff_from_ptr(diff2_ptr, inputbytes);
 
-            INPUT_SIZE_TYPE count = bigint_diff_diff_into(diff, diff2, diff_result);
-            assert(count);
-
-            if (count == 1) {
+            if (bigint_diff_diff_into_smart(diff, diff2, diff_result)) {
               *(diff_ptr + element_size - sizeof(bool)) = true;
               *(diff2_ptr + element_size - sizeof(bool)) = true;
               pushed += 1;

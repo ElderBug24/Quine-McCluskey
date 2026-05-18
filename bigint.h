@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <stdio.h>
 
@@ -58,6 +59,8 @@ static inline byte_diff_result_t diff_diff(const uint16_t, const uint16_t);
 
 static inline INPUT_SIZE_TYPE bigint_diff_into(const bigint_t, const bigint_t, bigint_diff_t);
 static inline INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t, const bigint_diff_t, bigint_diff_t);
+static inline bool bigint_diff_into_smart(const bigint_t, const bigint_t, bigint_diff_t);
+static inline bool bigint_diff_diff_into_smart(const bigint_diff_t, const bigint_diff_t, bigint_diff_t);
 
 static inline uint16_t byte_into_diff(const uint8_t);
 static inline void bigint_into_diff(const bigint_t, bigint_diff_t);
@@ -395,6 +398,25 @@ static inline INPUT_SIZE_TYPE bigint_diff_into(const bigint_t a, const bigint_t 
   return count;
 }
 
+// returns true if result is 1 else returns 0 and diff is invalid
+static inline bool bigint_diff_into_smart(const bigint_t a, const bigint_t b, bigint_diff_t diff) {
+  assert(a.count == b.count);
+  assert(a.count == diff.count);
+
+  INPUT_SIZE_TYPE count = 0;
+
+  for (size_t i = 0; i < a.count; ++i) {
+    byte_diff_result_t result = diff_byte(a.ptr[i], b.ptr[i]);
+    diff.ptr[i] = result.diff;
+    count += result.count;
+
+    if (count > 1) return false;
+  }
+
+  if (count == 0) return false;
+  return true;
+}
+
 static inline INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const bigint_diff_t b, bigint_diff_t diff) {
   assert(a.count == b.count);
   assert(a.count == diff.count);
@@ -410,15 +432,33 @@ static inline INPUT_SIZE_TYPE bigint_diff_diff_into(const bigint_diff_t a, const
   return count;
 }
 
+// returns true if result is 1 else returns 0 and diff is invalid
+static inline bool bigint_diff_diff_into_smart(const bigint_diff_t a, const bigint_diff_t b, bigint_diff_t diff) {
+  assert(a.count == b.count);
+  assert(a.count == diff.count);
+
+  INPUT_SIZE_TYPE count = 0;
+
+  for (size_t i = 0; i < a.count; ++i) {
+    byte_diff_result_t result = diff_diff(a.ptr[i], b.ptr[i]);
+    diff.ptr[i] = result.diff;
+    count += result.count;
+
+    if (count > 1) return false;
+  }
+
+  if (count == 0) return false;
+  return count;
+}
+
 static inline uint16_t byte_into_diff(const uint8_t num) {
-  return (num & 0b10000000) << 7
-       | (num & 0b01000000) << 6
-       | (num & 0b00100000) << 5
-       | (num & 0b00010000) << 4
-       | (num & 0b00001000) << 3
-       | (num & 0b00000100) << 2
-       | (num & 0b00000010) << 1
-       | (num & 0b00000001) << 0;
+  uint16_t x = num;
+
+  x = (x | (x << 4)) & 0b0000111100001111;
+  x = (x | (x << 2)) & 0b0011001100110011;
+  x = (x | (x << 1)) & 0b0101010101010101;
+
+  return x;
 }
 
 static inline void bigint_into_diff(const bigint_t num, bigint_diff_t diff) {
@@ -439,15 +479,20 @@ static inline bool bigint_diff_equals(const bigint_diff_t a, const bigint_diff_t
   return true;
 }
 
-static inline uint8_t diff_computational_cost(const uint16_t diff) {
-  return (uint8_t) (!(diff & 0b1000000000000000)
-                  + !(diff & 0b0010000000000000)
-                  + !(diff & 0b0000100000000000)
-                  + !(diff & 0b0000001000000000)
-                  + !(diff & 0b0000000010000000)
-                  + !(diff & 0b0000000000100000)
-                  + !(diff & 0b0000000000001000)
-                  + !(diff & 0b0000000000000010));
+static inline uint8_t diff_computational_cost(uint16_t diff) {
+    uint16_t v = (~diff) & 0b1010101010101010;
+    uint8_t c = 0;
+
+    c += (v >> 15) & 1;
+    c += (v >> 13) & 1;
+    c += (v >> 11) & 1;
+    c += (v >> 9) & 1;
+    c += (v >> 7) & 1;
+    c += (v >> 5) & 1;
+    c += (v >> 3) & 1;
+    c += (v >> 1) & 1;
+
+    return c;
 }
 
 static inline uint8_t diff_count_zeros(const uint16_t diff) {
