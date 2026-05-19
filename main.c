@@ -275,7 +275,6 @@ int main() {
       for (size_t j = 0; j < prime_implicants.count; ++j) {
         uint8_t* implicant_ptr = da_get(prime_implicants, j, final_element_size);
         uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
-
         size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
         for (size_t n = 0; n < ids_count; ++n) {
@@ -283,6 +282,7 @@ int main() {
           if (bigint_equals(id, minterm)) {
             last_j = j;
             sum += 1;
+
             break;
           }
         }
@@ -313,6 +313,7 @@ int main() {
             bigint_t minterm = bigint_from_ptr(da_get(final_minterms, j, inputbytes), inputbytes);
             if (bigint_equals(id, minterm)) {
               da_swap_remove(&final_minterms, j, inputbytes);
+
               break;
             }
           }
@@ -358,6 +359,7 @@ int main() {
       for (size_t i = 1; i < final_minterms.count; ++i) {
         ptr = malloc(sop.size * final_implicants.count * sizeof(size_t));
         if (!ptr) exit_error(2);
+
         sop_t new_sop = {
           .count = 0,
           .size = 0,
@@ -371,8 +373,8 @@ int main() {
           uint8_t* ids_ptr = implicant_ptr + inputbytes * sizeof(uint16_t);
           size_t ids_count = (size_t) 1 << *(INPUT_SIZE_TYPE*) (implicant_ptr + final_element_size - sizeof(bool) - sizeof(INPUT_SIZE_TYPE));
 
-          for (size_t n = 0; n < ids_count; ++n) {
-            bigint_t id = bigint_from_ptr(ids_ptr + n * inputbytes, inputbytes);
+          for (size_t n = ids_count; n; --n) {
+            bigint_t id = bigint_from_ptr(ids_ptr + (n - 1) * inputbytes, inputbytes);
 
             if (bigint_equals(id, minterm)) {
               size_t* ptr = sop.ptr;
@@ -380,11 +382,12 @@ int main() {
                 size_t count = *ptr;
 
                 bool contains = false;
-                for (size_t l = 0; l < count; ++l) {
-                  size_t id = ptr[l + 1];
+                for (size_t l = count; l; --l) {
+                  size_t id = ptr[l];
 
                   if (id == j) {
                     contains = true;
+
                     break;
                   }
                 }
@@ -507,7 +510,7 @@ int main() {
           bool essential = *(bool*) (implicant_ptr + final_element_size - sizeof(bool));
 
           if (index == implicant_index && !essential) break;
-          if (!essential) index += 1;
+          else if (!essential) index += 1;
         }
 
         da_push(&solution, &j, sizeof(size_t));
@@ -636,8 +639,8 @@ static inline uint8_t* compute_truthtable(INPUT_SIZE_TYPE inputbytes, INPUT_SIZE
 static inline void push_prime_implicant(da_header_t* prime_implicants, uint8_t* scratch, INPUT_SIZE_TYPE inputbytes, size_t final_element_size) {
   bigint_diff_t diff = bigint_diff_from_ptr(scratch, inputbytes);
 
-  for (size_t i = 0; i < prime_implicants->count; ++i) {
-    bigint_diff_t diff2 = bigint_diff_from_ptr(da_get(*prime_implicants, i, final_element_size), inputbytes);
+  for (size_t i = prime_implicants->count; i; --i) {
+    bigint_diff_t diff2 = bigint_diff_from_ptr(da_get(*prime_implicants, i - 1, final_element_size), inputbytes);
 
     if (bigint_diff_equals(diff, diff2)) return;
   }
